@@ -1,0 +1,17 @@
+{
+  "$comentario": "Nombres de modelo y opciones por proveedor. Cámbialos aquí, nunca en el código. Verifica los IDs vigentes en la documentación de cada proveedor.",
+  "llm": { "proveedor": "anthropic", "modelo": "claude-opus-5-5", "esfuerzo": "high" },
+  "voz": {
+    "elevenlabs": { "modelo": "eleven_multilingual_v2", "formato": "mp3_44100_128" },
+    "cartesia": { "modelo": "sonic-3", "version_api": "2026-03-01", "idioma": "es" },
+    "local-say": { "voz": "Paulina", "palabras_por_minuto": 170 }
+  },
+  "imagen": {
+    "google-nano-banana-2": { "modelo": "gemini-3.1-flash-image-preview", "tamano": "2K" },
+    "openai-gpt-image-2": { "modelo": "gpt-image-2", "tamano": "1536x1024", "calidad_estandar": "medium", "calidad_premium": "high" },
+    "fal-seedream": { "modelo": "fal-ai/bytedance/seedream/v4/text-to-image", "tamano": "landscape_16_9" },
+    "fal-flux": { "modelo": "fal-ai/flux/schnell", "tamano": "landscape_16_9" }
+  },
+  "transcripcion": { "proveedor": "openai-whisper", "modelo": "whisper-1" },
+  "imagenes": { "paralelo": 4, "reintentos": 3, "ancho_salida": 2560, "alto_salida": 1440 }
+}

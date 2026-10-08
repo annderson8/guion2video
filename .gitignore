@@ -1,0 +1,10 @@
+node_modules/
+proyectos/
+secretos/
+.env
+dist/
+build/
+*.log
+.DS_Store
+.guion2video-tmp/
+paquetes/web/dist/

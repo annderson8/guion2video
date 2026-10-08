@@ -1,0 +1,47 @@
+{
+  "id": "fraudes-latam",
+  "nombre": "Fraudes que marcaron a América Latina",
+  "idioma": "es",
+  "formato": { "ancho": 1920, "alto": 1080, "fps": 30 },
+  "voz": {
+    "proveedor": "elevenlabs",
+    "voz_id": "VOZ_CLONADA_ID",
+    "velocidad": 0.95,
+    "estabilidad": 0.5,
+    "similitud": 0.8,
+    "normalizar_numeros": false,
+    "lufs": -16,
+    "pausa_escena_s": 0.4,
+    "pausa_parte_s": 1.2
+  },
+  "imagen": {
+    "proveedor_principal": "google-nano-banana-2",
+    "proveedor_premium": "openai-gpt-image-2",
+    "estilo_prompt": "ilustración editorial estilo documental, pintura digital, luz cinematográfica, paleta ocre y azul oscuro, textura de grano, sin texto",
+    "negativo": "fotografía realista de personas reales, logotipos, marcas de agua, texto ilegible",
+    "imagenes_referencia": [],
+    "relacion_aspecto": "16:9"
+  },
+  "ritmo": {
+    "segundos_por_imagen_min": 5,
+    "segundos_por_imagen_max": 10,
+    "porcentaje_minimo_graficos": 25,
+    "max_imagenes_seguidas": 6
+  },
+  "tipografia": { "titulos": "Bebas Neue", "subtitulos": "Inter", "cifras": "JetBrains Mono" },
+  "colores": { "fondo": "#0E1116", "acento": "#E0A526", "texto": "#F4F1EA", "alerta": "#C2412D" },
+  "subtitulos": { "activos": true, "palabras_por_bloque": 6, "resaltar_palabra_actual": true, "posicion": "inferior" },
+  "musica": {
+    "proveedor": "jamendo",
+    "volumen_db": -6,
+    "ducking_db": -8,
+    "efectos_proveedor": "freesound",
+    "efectos_volumen_db": -10
+  },
+  "intro_outro": {},
+  "marca": { "texto": "FRAUDES LATAM" },
+  "publicacion": {
+    "nota_ia": "Este video usa la voz sintética del creador del canal (clonada con su consentimiento) e ilustraciones generadas con inteligencia artificial. La investigación y el guion son originales y se basan en las fuentes públicas citadas.",
+    "llamadas_accion": ["Suscríbete para ver la próxima historia.", "Cuéntanos en los comentarios si alguien que conoces cayó en una pirámide."]
+  }
+}

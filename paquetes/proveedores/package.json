@@ -1,0 +1,13 @@
+{
+  "name": "@guion2video/proveedores",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "@guion2video/nucleo": "workspace:*",
+    "sharp": "^0.34.4",
+    "zod": "^4.1.12"
+  }
+}

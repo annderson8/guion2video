@@ -1,0 +1,15 @@
+{
+  "name": "@guion2video/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "guion2video": "./src/index.ts"
+  },
+  "dependencies": {
+    "@guion2video/nucleo": "workspace:*",
+    "@guion2video/pasos": "workspace:*",
+    "@guion2video/proveedores": "workspace:*",
+    "@guion2video/render": "workspace:*"
+  }
+}

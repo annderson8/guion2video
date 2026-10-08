@@ -1,0 +1,6 @@
+packages:
+  - "paquetes/*"
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - "@remotion/compositor-darwin-arm64"

@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": ["paquetes/nucleo/src", "paquetes/proveedores/src", "paquetes/pasos/src", "paquetes/render/src", "paquetes/api/src", "paquetes/cli/src", "pruebas", "vitest.config.ts"]
+}

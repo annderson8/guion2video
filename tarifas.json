@@ -1,0 +1,32 @@
+{
+  "$comentario": "Tarifas orientativas (octubre 2026). Los precios cambian: confírmalos en la página oficial de cada proveedor antes de producir.",
+  "actualizado": "2026-10-08",
+  "llm": {
+    "claude-opus-5-5": { "entrada_por_millon": 4, "salida_por_millon": 20 },
+    "claude-sonnet-5-5": { "entrada_por_millon": 2, "salida_por_millon": 10 },
+    "claude-haiku-5-5": { "entrada_por_millon": 0.1, "salida_por_millon": 0.5 },
+    "simulado": { "entrada_por_millon": 0, "salida_por_millon": 0 }
+  },
+  "voz": {
+    "elevenlabs": { "por_mil_caracteres": 0.15 },
+    "cartesia": { "por_mil_caracteres": 0.05 },
+    "local-say": { "por_mil_caracteres": 0 },
+    "simulado": { "por_mil_caracteres": 0 }
+  },
+  "imagen": {
+    "google-nano-banana-2": { "estandar": 0.067, "premium": 0.101 },
+    "openai-gpt-image-2": { "estandar": 0.041, "premium": 0.165 },
+    "fal-seedream": { "estandar": 0.03 },
+    "fal-flux": { "estandar": 0.003 },
+    "simulado": { "estandar": 0, "premium": 0 }
+  },
+  "transcripcion": {
+    "openai-whisper": { "por_minuto": 0.006 },
+    "simulado": { "por_minuto": 0 }
+  },
+  "audio": {
+    "jamendo": { "por_pista": 0 },
+    "freesound": { "por_pista": 0 },
+    "biblioteca": { "por_pista": 0 }
+  }
+}

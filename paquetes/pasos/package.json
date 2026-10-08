@@ -1,0 +1,14 @@
+{
+  "name": "@guion2video/pasos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@guion2video/nucleo": "workspace:*",
+    "@guion2video/proveedores": "workspace:*",
+    "@guion2video/render": "workspace:*",
+    "sharp": "^0.34.4",
+    "zod": "^4.1.12"
+  }
+}

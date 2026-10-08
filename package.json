@@ -1,0 +1,54 @@
+{
+  "name": "guion2video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Convierte un guion en Markdown en un video documental narrado con IA (voz, imágenes, gráficos animados con Remotion y subtítulos).",
+  "license": "MIT",
+  "author": "Annderson Rey",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/annderson8/guion2video.git"
+  },
+  "homepage": "https://github.com/annderson8/guion2video#readme",
+  "bugs": {
+    "url": "https://github.com/annderson8/guion2video/issues"
+  },
+  "keywords": [
+    "remotion",
+    "video",
+    "ia",
+    "documental",
+    "tts",
+    "elevenlabs",
+    "claude",
+    "youtube",
+    "guion",
+    "español"
+  ],
+  "type": "module",
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "guion2video": "tsx paquetes/cli/src/index.ts",
+    "api": "tsx paquetes/api/src/servidor.ts",
+    "web": "pnpm --filter @guion2video/web dev",
+    "studio": "pnpm --filter @guion2video/render studio",
+    "dev": "concurrently -n api,web -c blue,green \"pnpm api\" \"pnpm web\"",
+    "test": "GUION2VIDEO_SIMULAR=1 vitest run",
+    "test:watch": "GUION2VIDEO_SIMULAR=1 vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @guion2video/web typecheck"
+  },
+  "devDependencies": {
+    "@guion2video/nucleo": "workspace:*",
+    "@guion2video/pasos": "workspace:*",
+    "@guion2video/proveedores": "workspace:*",
+    "@guion2video/render": "workspace:*",
+    "@types/node": "^22.15.0",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
