@@ -8,9 +8,13 @@ export interface ResultadoComando {
   stderr: string;
 }
 
-export function ejecutarComando(comando: string, args: string[], op: { entrada?: Buffer } = {}): Promise<ResultadoComando> {
+export function ejecutarComando(
+  comando: string,
+  args: string[],
+  op: { entrada?: Buffer; cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number } = {},
+): Promise<ResultadoComando> {
   return new Promise((resolve, reject) => {
-    const proceso = spawn(comando, args, { stdio: ["pipe", "pipe", "pipe"] });
+    const proceso = spawn(comando, args, { stdio: ["pipe", "pipe", "pipe"], cwd: op.cwd, env: op.env, timeout: op.timeoutMs });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
     proceso.stdout.on("data", (d) => out.push(d));

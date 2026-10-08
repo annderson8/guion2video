@@ -11,6 +11,7 @@ import { crearFal } from "./imagen/fal.ts";
 import { crearImagenSimulada } from "./imagen/simulado.ts";
 import { crearAnthropic } from "./llm/anthropic.ts";
 import { crearLlmSimulado } from "./llm/simulado.ts";
+import { crearClaudeCli } from "./llm/claude-cli.ts";
 import { crearWhisper } from "./transcripcion/whisper.ts";
 import { crearJamendo } from "./audio/jamendo.ts";
 import { crearFreesound } from "./audio/freesound.ts";
@@ -76,6 +77,8 @@ export async function crearProveedores(
     llm: () =>
       memo("llm", () => {
         if (simular) return crearLlmSimulado(costos);
+        // Uso personal: Claude Code con la sesión de tu suscripción (rama local "personal").
+        if (cfg.llm.proveedor === "claude-cli") return crearClaudeCli(cfg.llm);
         if (cfg.llm.proveedor !== "anthropic") return desconocido("LLM", cfg.llm.proveedor);
         return crearAnthropic(k.ANTHROPIC_API_KEY, cfg.llm, costos);
       }),
