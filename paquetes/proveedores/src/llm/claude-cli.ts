@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ejecutarComando } from "../medios.ts";
 import { ErrorProveedor } from "../http.ts";
-import type { ProveedorLlm } from "../tipos.ts";
+import type { AdjuntoImagen, ProveedorLlm } from "../tipos.ts";
 import { extraerJson, validarRespuesta } from "./json.ts";
 
 /**
@@ -11,10 +11,32 @@ import { extraerJson, validarRespuesta } from "./json.ts";
  * (`claude -p`) con la sesión de la suscripción de quien lo ejecuta, en vez de la API.
  * Se quita ANTHROPIC_API_KEY del entorno para que Claude Code no la use en lugar de la sesión.
  */
+/** Un mensaje de usuario en el formato stream-json de Claude Code: texto y, si hay, cada imagen con su etiqueta. */
+function lineaUsuario(mensaje: string, adjuntos: AdjuntoImagen[]): string {
+  const content = [
+    { type: "text", text: mensaje },
+    ...adjuntos.flatMap((a) => [
+      { type: "text", text: a.etiqueta },
+      { type: "image", source: { type: "base64", media_type: a.mime, data: a.datos.toString("base64") } },
+    ]),
+  ];
+  return `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
+}
+
+/** De la salida stream-json solo interesa el evento final "result". */
+function resultado(stdout: string): unknown {
+  const lineas = stdout.split("\n").filter((l) => l.trim().startsWith("{"));
+  for (let i = lineas.length - 1; i >= 0; i--) {
+    const evento = JSON.parse(lineas[i]) as { type?: string };
+    if (evento.type === "result") return evento;
+  }
+  throw new Error(`Claude Code no devolvió resultado: ${stdout.slice(-300)}`);
+}
+
 export function crearClaudeCli(cfg: { modelo: string; esfuerzo: string }): ProveedorLlm {
   const modelo = cfg.modelo;
 
-  async function llamar(sistema: string, mensaje: string, etiqueta: string) {
+  async function llamar(sistema: string, mensaje: string, etiqueta: string, adjuntos: AdjuntoImagen[] = []) {
     // Carpeta vacía: Claude Code no carga CLAUDE.md ni ajustes de ningún proyecto.
     const dir = await mkdtemp(join(tmpdir(), "guion2video-claude-"));
     const entorno = { ...process.env };
@@ -24,7 +46,10 @@ export function crearClaudeCli(cfg: { modelo: string; esfuerzo: string }): Prove
         "claude",
         [
           "-p",
-          "--output-format", "json",
+          // stream-json en la entrada permite mandar imágenes junto al texto (la salida debe ser stream-json también).
+          "--input-format", "stream-json",
+          "--output-format", "stream-json",
+          "--verbose",
           "--system-prompt", sistema,
           "--tools", "",
           "--model", modelo,
@@ -33,9 +58,9 @@ export function crearClaudeCli(cfg: { modelo: string; esfuerzo: string }): Prove
           "--strict-mcp-config",
           ...(["low", "medium", "high", "max"].includes(cfg.esfuerzo) ? ["--effort", cfg.esfuerzo] : []),
         ],
-        { entrada: Buffer.from(mensaje, "utf8"), cwd: dir, env: entorno, timeoutMs: 20 * 60_000 },
+        { entrada: Buffer.from(lineaUsuario(mensaje, adjuntos), "utf8"), cwd: dir, env: entorno, timeoutMs: 20 * 60_000 },
       );
-      const r = JSON.parse(stdout) as {
+      const r = resultado(stdout) as {
         is_error?: boolean;
         result?: string;
         subtype?: string;
@@ -74,7 +99,7 @@ export function crearClaudeCli(cfg: { modelo: string; esfuerzo: string }): Prove
       let mensaje = pet.mensaje;
       let modeloUsado = modelo;
       for (let intento = 0; intento < 2; intento++) {
-        const r = await llamar(`${pet.sistema}\n\nResponde únicamente con el JSON pedido, sin texto adicional.`, mensaje, pet.etiqueta);
+        const r = await llamar(`${pet.sistema}\n\nResponde únicamente con el JSON pedido, sin texto adicional.`, mensaje, pet.etiqueta, pet.adjuntos);
         modeloUsado = r.modelo;
         tokens.entrada += r.tokens.entrada;
         tokens.salida += r.tokens.salida;

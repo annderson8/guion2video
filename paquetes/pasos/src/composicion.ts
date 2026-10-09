@@ -9,8 +9,6 @@ import {
   huellaArchivo,
   leerJson,
   leerJsonSiExiste,
-  normalizarPalabra,
-  palabras,
 } from "@guion2video/nucleo";
 import { duracionMs } from "@guion2video/proveedores";
 import { FRAMES_TRANSICION, type BloqueSubtitulo, type ItemAudio, type ItemSuperposicion, type ItemVideo, type Timeline } from "@guion2video/render";
@@ -22,12 +20,11 @@ import { leerAlineacion } from "./alineacion.ts";
 import { leerMetaImagen } from "./imagenes.ts";
 import type { ArchivoEfectos, ArchivoMusica } from "./audio-ambiente.ts";
 import { construirBloques } from "./subtitulos.ts";
-import { leerSuperposiciones, type Superposicion } from "./superposiciones.ts";
+import { compilarAnimacion, leerSuperposiciones } from "./superposiciones.ts";
+import { DURACION_SEPARADOR_MS, estiloVisual, pausaTrasMs } from "./tiempos.ts";
 import { mezclar, type EntradaMezcla } from "./mezcla.ts";
 
 const VERSION = 2;
-const DURACION_SEPARADOR_MS = 2500;
-const COLA_FINAL_MS = 1500;
 const MAX_EFECTO_MS = 8000;
 export const LUFS_FINAL = -14;
 
@@ -119,13 +116,12 @@ export const pasoComposicion: Paso = {
 
     for (let i = 0; i < escenas.length; i++) {
       const e = escenas[i];
-      const siguiente = escenas[i + 1];
       const narrada = !!e.texto_narracion.trim();
       const vozMeta = x.voces[e.id];
       const alineacion = x.alineaciones[e.id];
       if (narrada && (!vozMeta || !alineacion)) throw new ErrorGuion2Video(`Falta la voz o la alineación de ${e.id}`, "dependencia");
       const audioMs = narrada ? alineacion!.duracion_ms : DURACION_SEPARADOR_MS;
-      const pausaMs = !siguiente ? COLA_FINAL_MS : siguiente.parte !== e.parte ? estilo.voz.pausa_parte_s * 1000 : estilo.voz.pausa_escena_s * 1000;
+      const pausaMs = pausaTrasMs(escenas, i, estilo);
       const inicio = cursor;
       const fin = cursor + audioMs + pausaMs;
       cursor = fin;
@@ -154,13 +150,20 @@ export const pasoComposicion: Paso = {
       }
 
       if (narrada) {
-        const lista = x.superposiciones?.escenas[e.id] ?? [];
-        lista.forEach((s, k) => {
-          const t = tiempoSuperposicion(s, alineacion!.palabras, { inicio, finVoz: inicio + alineacion!.duracion_ms, fin });
-          if (t.aviso) avisos.push(`${e.id}: ${t.aviso}`);
-          if (t.hasta - t.desde < 800) return;
-          superposiciones.push({ id: `${e.id}-sup-${k + 1}`, escena: e.id, desde: aFrame(t.desde), duracion: aFrame(t.hasta) - aFrame(t.desde), tipo: s.tipo, texto: s.texto, valor: s.valor, icono: s.icono });
-        });
+        const animacion = x.superposiciones?.escenas[e.id];
+        if (animacion) {
+          const c = compilarAnimacion(animacion.codigo);
+          if ("error" in c) avisos.push(`${e.id}: la animación no compila y se omite (${c.error})`);
+          else
+            superposiciones.push({
+              id: `${e.id}-animacion`,
+              escena: e.id,
+              desde: desdeF,
+              duracion: hastaF - desdeF,
+              codigo: c.js,
+              palabras: alineacion!.palabras.map((p) => ({ texto: p.palabra, desde: aFrame(p.inicio_ms), hasta: aFrame(p.fin_ms) })),
+            });
+        }
         voz.push({ desde: desdeF, duracion: aFrame(vozMeta!.duracion_ms), src: vozMeta!.archivo, huella: vozMeta!.archivo_huella, etiqueta: e.id });
         voces.push({ src: ctx.espacio.ruta(vozMeta!.archivo), desde_ms: inicio, duracion_ms: vozMeta!.duracion_ms });
         subtitulos.push(
@@ -218,12 +221,7 @@ export const pasoComposicion: Paso = {
       ancho: estilo.formato.ancho,
       alto: estilo.formato.alto,
       duracion_frames: aFrame(cursor),
-      estilo: {
-        colores: estilo.colores,
-        tipografia: estilo.tipografia,
-        subtitulos: { activos: estilo.subtitulos.activos, resaltar_palabra_actual: estilo.subtitulos.resaltar_palabra_actual, posicion: estilo.subtitulos.posicion },
-        marca: { texto: estilo.marca.texto, logo: (await recurso(ctx, estilo.marca.logo, "logo"))?.src },
-      },
+      estilo: { ...estiloVisual(estilo), marca: { texto: estilo.marca.texto, logo: (await recurso(ctx, estilo.marca.logo, "logo"))?.src } },
       pistas: { video, voz, musica, efectos, superposiciones, mezcla: { desde: 0, src: "audio/mezcla.wav", huella: (await huellaArchivo(rutaMezcla)).slice(0, 12) }, subtitulos },
       partes,
     };
@@ -231,37 +229,10 @@ export const pasoComposicion: Paso = {
     const minutos = cursor / 60000;
     return {
       costo_usd: 0,
-      resumen: `timeline de ${minutos.toFixed(1)} min: ${video.length} elementos visuales, ${superposiciones.length} textos e íconos, ${subtitulos.length} bloques de subtítulos`,
+      resumen: `timeline de ${minutos.toFixed(1)} min: ${video.length} elementos visuales, ${superposiciones.length} animaciones, ${subtitulos.length} bloques de subtítulos`,
       avisos,
     };
   },
 };
-
-const ADELANTO_MS = 120;
-const DURACION_ETIQUETA_MS = 4000;
-const MIN_VISIBLE_MS = 2500;
-const MAX_VISIBLE_MS = 6000;
-
-/**
- * Cuándo se ve una superposición (ms absolutos): entra justo antes de que la voz diga su palabra ancla
- * y se queda hasta que termina la narración de la escena (entre 2,5 y 6 s). La etiqueta entra al inicio.
- */
-export function tiempoSuperposicion(
-  s: Pick<Superposicion, "tipo" | "palabra">,
-  dichas: { palabra: string; inicio_ms: number }[],
-  escena: { inicio: number; finVoz: number; fin: number },
-): { desde: number; hasta: number; aviso?: string } {
-  const buscada = normalizarPalabra(palabras(s.palabra ?? "")[0] ?? "");
-  const p = buscada ? dichas.find((d) => normalizarPalabra(d.palabra) === buscada) : undefined;
-  const limite = escena.fin - 150;
-  if (s.tipo === "etiqueta") {
-    const desde = p ? escena.inicio + p.inicio_ms - ADELANTO_MS : escena.inicio + 300;
-    return { desde, hasta: Math.min(desde + DURACION_ETIQUETA_MS, limite) };
-  }
-  const aviso = p ? undefined : `no encontré la palabra "${s.palabra ?? ""}" en la voz; "${s.tipo}" entra a mitad de escena`;
-  const desde = p ? Math.max(escena.inicio, escena.inicio + p.inicio_ms - ADELANTO_MS) : escena.inicio + (escena.finVoz - escena.inicio) * 0.4;
-  const hasta = Math.min(Math.max(escena.finVoz, desde + MIN_VISIBLE_MS), desde + MAX_VISIBLE_MS, limite);
-  return { desde, hasta, aviso };
-}
 
 export const leerTimeline = (ctx: ContextoPaso) => leerJson<Timeline>(ctx.espacio.rutas.timeline);

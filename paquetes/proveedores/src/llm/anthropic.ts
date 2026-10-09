@@ -1,10 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { CalculadoraCostos } from "@guion2video/nucleo";
 import { ErrorProveedor } from "../http.ts";
-import type { ProveedorLlm } from "../tipos.ts";
+import type { AdjuntoImagen, ProveedorLlm } from "../tipos.ts";
 import { extraerJson, validarRespuesta } from "./json.ts";
 
 type Esfuerzo = "low" | "medium" | "high" | "xhigh" | "max";
+
+/** Texto del mensaje seguido de cada imagen con su etiqueta. */
+function contenido(mensaje: string, adjuntos: AdjuntoImagen[] = []): Anthropic.Beta.Messages.BetaContentBlockParam[] | string {
+  if (!adjuntos.length) return mensaje;
+  return [
+    { type: "text", text: mensaje },
+    ...adjuntos.flatMap((a): Anthropic.Beta.Messages.BetaContentBlockParam[] => [
+      { type: "text", text: a.etiqueta },
+      { type: "image", source: { type: "base64", media_type: a.mime, data: a.datos.toString("base64") } },
+    ]),
+  ];
+}
 
 /**
  * Claude vía la API de Anthropic. Pide JSON, lo valida con Zod y, si no valida,
@@ -23,7 +35,7 @@ export function crearAnthropic(
     modelo: cfg.modelo,
     estimarCosto: (entrada, salida) => costos.llm(cfg.modelo, entrada, salida),
     async generarJson(pet) {
-      const mensajes: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: "user", content: pet.mensaje }];
+      const mensajes: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: "user", content: contenido(pet.mensaje, pet.adjuntos) }];
       let costo = 0;
       const tokens = { entrada: 0, salida: 0 };
       let modeloUsado = cfg.modelo;

@@ -1,127 +1,250 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { transformSync } from "esbuild";
+import sharp from "sharp";
 import { z } from "zod";
-import { enParalelo, ErrorGuion2Video, escribirJson, existe, huella, huellaArchivo, leerJsonSiExiste, normalizarPalabra, palabras, type Escena } from "@guion2video/nucleo";
-import { NOMBRES_ICONOS } from "@guion2video/render";
+import { enParalelo, ErrorGuion2Video, escribirJson, existe, huella, huellaArchivo, leerJsonSiExiste, palabras, type Escena } from "@guion2video/nucleo";
+import type { AdjuntoImagen } from "@guion2video/proveedores";
+import type { ItemVideo, Timeline } from "@guion2video/render";
 import type { Paso } from "./paso.ts";
 import type { ContextoPaso } from "./contexto.ts";
 import { leerGuion } from "./guion.ts";
 import { leerEscenas } from "./escenas.ts";
+import { leerAlineacion } from "./alineacion.ts";
+import { leerMetaImagen } from "./imagenes.ts";
+import { construirBloques } from "./subtitulos.ts";
 import { llmConCache, registrarCosto } from "./cache.ts";
-import { mensajeSuperposiciones, sistemaSuperposiciones } from "./prompts.ts";
+import { mensajeAnimaciones, mensajeRevisionAnimaciones, sistemaAnimaciones, sistemaRevisionAnimaciones } from "./prompts.ts";
+import { estiloVisual, pausaTrasMs } from "./tiempos.ts";
 
-const VERSION = 1;
+const VERSION = 2;
+const MAX_CARACTERES = 8000;
+const ANCHO_ADJUNTO = 960;
 
-export const Superposicion = z.object({
-  tipo: z.enum(["palabra_clave", "etiqueta", "dato", "sello"]),
-  texto: z.string().trim().min(1).max(48),
-  valor: z.string().trim().max(18).optional(),
-  // Un ícono desconocido no invalida la respuesta: se queda sin ícono.
-  icono: z.string().transform((i) => ((NOMBRES_ICONOS as string[]).includes(i) ? i : undefined)).optional(),
-  palabra: z.string().trim().optional(),
+export const AnimacionEscena = z.object({
+  idea: z.string().default(""),
+  /** Qué cambió Claude al revisar los fotogramas renderizados. */
+  revision: z.string().optional(),
+  codigo: z.string().min(20),
 });
-export type Superposicion = z.infer<typeof Superposicion>;
+export type AnimacionEscena = z.infer<typeof AnimacionEscena>;
 
-export const ArchivoSuperposiciones = z.object({
-  escenas: z.record(z.string(), z.array(Superposicion)),
-});
+/** superposiciones.json: la animación (código JSX) de cada escena que la lleva. Se puede editar a mano. */
+export const ArchivoSuperposiciones = z.object({ escenas: z.record(z.string(), AnimacionEscena) });
 export type ArchivoSuperposiciones = z.infer<typeof ArchivoSuperposiciones>;
 
-const RespuestaParte = z.object({
-  escenas: z.array(z.object({ id: z.string(), superposiciones: z.array(Superposicion).default([]) })),
+const RespuestaDiseno = z.object({
+  escenas: z.array(
+    z.object({
+      id: z.string(),
+      idea: z.string().default(""),
+      codigo: z.string().nullable().default(null),
+      revisar_en: z.array(z.number()).max(3).default([]),
+    }),
+  ),
 });
-type RespuestaParte = z.infer<typeof RespuestaParte>;
+type RespuestaDiseno = z.infer<typeof RespuestaDiseno>;
+
+const RespuestaRevision = z.object({
+  escenas: z.array(z.object({ id: z.string(), ok: z.boolean(), comentario: z.string().default(""), codigo: z.string().nullable().default(null) })),
+});
+type RespuestaRevision = z.infer<typeof RespuestaRevision>;
 
 export const rutaSuperposiciones = (ctx: ContextoPaso) => ctx.espacio.ruta("superposiciones.json");
 export const leerSuperposiciones = (ctx: ContextoPaso) => leerJsonSiExiste(rutaSuperposiciones(ctx), ArchivoSuperposiciones);
 
-/** Escenas sobre las que se puede superponer algo: las que tienen ilustración y narración. */
-const conIlustracion = (escenas: Escena[]) => escenas.filter((e) => (e.tipo_visual === "imagen_ia" || e.tipo_visual === "archivo") && e.texto_narracion.trim());
+// Lo que el código no puede tocar: red, DOM, almacenamiento, tiempo real ni azar no determinista.
+const PROHIBIDO = /\b(import|export|require|fetch|XMLHttpRequest|WebSocket|eval|window|document|globalThis|localStorage|sessionStorage|indexedDB|navigator|process|setTimeout|setInterval)\b|Math\.random|Date\.now|new Date/;
 
-const contiene = (texto: string, palabra: string) => {
-  const buscada = normalizarPalabra(palabras(palabra)[0] ?? "");
-  return !!buscada && palabras(texto).some((p) => normalizarPalabra(p) === buscada);
-};
-
-export function validarSuperposiciones(escenas: Escena[], r: RespuestaParte): string[] {
-  const errores: string[] = [];
-  const porId = new Map(escenas.map((e) => [e.id, e]));
-  for (const e of r.escenas) {
-    const escena = porId.get(e.id);
-    if (!escena) {
-      errores.push(`"${e.id}" no es una de las escenas recibidas`);
-      continue;
-    }
-    if (e.superposiciones.length > 2) errores.push(`${e.id}: máximo 2 superposiciones`);
-    if (e.superposiciones.filter((s) => s.tipo === "etiqueta").length > 1) errores.push(`${e.id}: máximo una "etiqueta"`);
-    if (e.superposiciones.filter((s) => s.tipo !== "etiqueta").length > 1) errores.push(`${e.id}: máximo una entre "palabra_clave", "dato" y "sello"`);
-    for (const s of e.superposiciones) {
-      if (s.tipo === "dato" && !s.valor) errores.push(`${e.id}: el "dato" necesita "valor"`);
-      if (s.tipo === "palabra_clave" && palabras(s.texto).length > 4) errores.push(`${e.id}: "${s.texto}" tiene más de 4 palabras`);
-      if (s.tipo === "sello" && palabras(s.texto).length > 2) errores.push(`${e.id}: el sello "${s.texto}" tiene más de 2 palabras`);
-      if (s.tipo !== "etiqueta" && !s.palabra) errores.push(`${e.id}: "${s.texto}" necesita "palabra"`);
-      if (s.palabra && !contiene(escena.texto_narracion, s.palabra)) errores.push(`${e.id}: la palabra "${s.palabra}" no está en la narración`);
-    }
+/** Valida y compila a JavaScript el JSX de una animación. Lo usan este paso y la composición. */
+export function compilarAnimacion(codigo: string): { js: string } | { error: string } {
+  if (codigo.length > MAX_CARACTERES) return { error: `tiene ${codigo.length} caracteres (máximo ${MAX_CARACTERES})` };
+  const prohibido = codigo.match(PROHIBIDO);
+  if (prohibido) return { error: `usa "${prohibido[0]}", que no está permitido` };
+  if (!/function\s+Superposicion\s*\(/.test(codigo)) return { error: 'debe declarar "function Superposicion(props)"' };
+  try {
+    const r = transformSync(codigo, { loader: "jsx", jsx: "transform", jsxFactory: "React.createElement", jsxFragment: "React.Fragment", target: "es2020" });
+    return { js: r.code };
+  } catch (e) {
+    return { error: (e as Error).message.split("\n").slice(0, 4).join(" ").slice(0, 400) };
   }
-  const faltan = escenas.filter((e) => !r.escenas.some((x) => x.id === e.id)).map((e) => e.id);
-  if (faltan.length) errores.push(`Faltan escenas: ${faltan.join(", ")}`);
-  return errores;
 }
 
-/** Respuesta determinista para el modo simulado. */
-function simular(escenas: Escena[]): RespuestaParte {
+/** Escenas sobre las que va una animación: las que tienen ilustración y narración. */
+const conIlustracion = (escenas: Escena[]) => escenas.filter((e) => (e.tipo_visual === "imagen_ia" || e.tipo_visual === "archivo") && e.texto_narracion.trim());
+
+interface DatosEscena {
+  escena: Escena;
+  duracion: number;
+  palabras: { texto: string; desde: number; hasta: number }[];
+  /** En ms, para los subtítulos de la revisión. */
+  palabrasMs: { texto: string; inicio_ms: number; fin_ms: number }[];
+  imagenes: { archivo: string; huella: string }[];
+}
+
+async function datosEscenas(ctx: ContextoPaso): Promise<DatosEscena[]> {
+  const { escenas } = await leerEscenas(ctx);
+  const { estilo } = ctx.estilo;
+  const fps = estilo.formato.fps;
+  const aFrame = (ms: number) => Math.round((ms * fps) / 1000);
+  const ilustradas = new Set(conIlustracion(escenas).map((e) => e.id));
+  const datos: DatosEscena[] = [];
+  for (let i = 0; i < escenas.length; i++) {
+    const e = escenas[i];
+    if (!ilustradas.has(e.id)) continue;
+    const alineacion = await leerAlineacion(ctx, e.id);
+    if (!alineacion) throw new ErrorGuion2Video(`Falta la alineación de ${e.id}`, "dependencia");
+    const imagenes = [];
+    for (const img of e.imagenes) {
+      const meta = await leerMetaImagen(ctx, img.id);
+      if (!meta) throw new ErrorGuion2Video(`Falta la imagen ${img.id}`, "dependencia");
+      imagenes.push({ archivo: meta.archivo, huella: meta.archivo_huella });
+    }
+    datos.push({
+      escena: e,
+      duracion: aFrame(alineacion.duracion_ms + pausaTrasMs(escenas, i, estilo)),
+      palabras: alineacion.palabras.map((p) => ({ texto: p.palabra, desde: aFrame(p.inicio_ms), hasta: aFrame(p.fin_ms) })),
+      palabrasMs: alineacion.palabras.map((p) => ({ texto: p.palabra, inicio_ms: p.inicio_ms, fin_ms: p.fin_ms })),
+      imagenes,
+    });
+  }
+  return datos;
+}
+
+const validarCodigos = (ids: string[], r: { escenas: { id: string; codigo: string | null }[] }) => {
+  const errores: string[] = [];
+  for (const e of r.escenas) {
+    if (!ids.includes(e.id)) errores.push(`"${e.id}" no es una de las escenas recibidas`);
+    if (e.codigo) {
+      const c = compilarAnimacion(e.codigo);
+      if ("error" in c) errores.push(`${e.id}: el código no es válido: ${c.error}`);
+    }
+  }
+  const faltan = ids.filter((id) => !r.escenas.some((e) => e.id === id));
+  if (faltan.length) errores.push(`Faltan escenas: ${faltan.join(", ")}`);
+  return errores;
+};
+
+/** Respuesta determinista para el modo simulado: la palabra más larga de la escena, centrada. */
+function simular(datos: DatosEscena[]): RespuestaDiseno {
   return {
-    escenas: escenas.map((e, i) => {
-      const ps = palabras(e.texto_narracion).map((p) => p.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""));
-      const anio = ps.find((p) => /^(19|20)\d{2}$/.test(p));
-      const cifra = ps.find((p) => /^\d{1,3}(\.\d{3})+$/.test(p));
-      const larga = [...ps].sort((a, b) => b.length - a.length)[0];
-      const superposiciones: Superposicion[] = [];
-      if (anio) superposiciones.push({ tipo: "etiqueta", texto: anio, icono: "fecha" });
-      if (cifra) superposiciones.push({ tipo: "dato", valor: cifra, texto: "dato", icono: "personas", palabra: cifra });
-      else if (i % 2 === 0 && larga) superposiciones.push({ tipo: "palabra_clave", texto: larga, icono: "alerta", palabra: larga });
-      return { id: e.id, superposiciones };
+    escenas: datos.map((d, i) => {
+      if (i % 3 === 2) return { id: d.escena.id, idea: "", codigo: null, revisar_en: [] };
+      const palabra = palabras(d.escena.texto_narracion).map((p) => p.replace(/[^\p{L}\p{N}]/gu, "")).sort((a, b) => b.length - a.length)[0] ?? "";
+      const codigo = `function Superposicion({ duracion }) {
+  const frame = useCurrentFrame();
+  const o = interpolate(frame, [0, 10, duracion - 10, duracion], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", opacity: o }}>
+    <span style={{ fontFamily: tema.fuentes.titulos, fontSize: 110, color: tema.colores.acento }}>{${JSON.stringify(palabra.toUpperCase())}}</span>
+  </AbsoluteFill>;
+}`;
+      return { id: d.escena.id, idea: `Resalta "${palabra}"`, codigo, revisar_en: [Math.round(d.duracion / 2)] };
     }),
   };
 }
 
+const adjuntarImagen = async (etiqueta: string, ruta: string): Promise<AdjuntoImagen> => ({
+  etiqueta,
+  mime: "image/jpeg",
+  datos: await sharp(await readFile(ruta)).resize({ width: ANCHO_ADJUNTO, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer(),
+});
+
+/** Timeline mínimo con las escenas una tras otra (ilustración, animación y subtítulos) para renderizar fotogramas de revisión. */
+function timelineRevision(ctx: ContextoPaso, datos: DatosEscena[], codigos: Map<string, string>): { timeline: Timeline; inicio: Map<string, number> } {
+  const { estilo } = ctx.estilo;
+  const fps = estilo.formato.fps;
+  const video: ItemVideo[] = [];
+  const superposiciones: NonNullable<Timeline["pistas"]["superposiciones"]> = [];
+  const subtitulos: Timeline["pistas"]["subtitulos"] = [];
+  const inicio = new Map<string, number>();
+  let cursor = 0;
+  for (const d of datos) {
+    inicio.set(d.escena.id, cursor);
+    d.imagenes.forEach((img, j) => {
+      const a = cursor + Math.round((d.duracion * j) / d.imagenes.length);
+      const b = cursor + Math.round((d.duracion * (j + 1)) / d.imagenes.length);
+      video.push({ id: `${d.escena.id}-${j}`, escena: d.escena.id, desde: a, duracion: b - a, tipo: "imagen_ia", src: img.archivo, huella: img.huella, movimiento: d.escena.imagenes[j]?.movimiento, transicion: "corte" });
+    });
+    const js = codigos.get(d.escena.id);
+    if (js) superposiciones.push({ id: `${d.escena.id}-animacion`, escena: d.escena.id, desde: cursor, duracion: d.duracion, codigo: js, palabras: d.palabras });
+    const inicioMs = (cursor * 1000) / fps;
+    subtitulos.push(
+      ...construirBloques(
+        d.palabrasMs.map((p) => ({ texto: p.texto, inicio_ms: inicioMs + p.inicio_ms, fin_ms: inicioMs + p.fin_ms })),
+        { fps, palabrasPorBloque: estilo.subtitulos.palabras_por_bloque },
+      ),
+    );
+    cursor += d.duracion;
+  }
+  const timeline: Timeline = {
+    version: 1,
+    titulo: "revisión",
+    fps,
+    ancho: estilo.formato.ancho,
+    alto: estilo.formato.alto,
+    duracion_frames: Math.max(1, cursor),
+    estilo: estiloVisual(estilo),
+    pistas: { video, voz: [], musica: [], efectos: [], subtitulos, superposiciones },
+    partes: [],
+  };
+  return { timeline, inicio };
+}
+
 const huellaEntradas = async (ctx: ContextoPaso) => {
   const llm = ctx.proveedores.llm();
+  const { estilo } = ctx.estilo;
   const { escenas } = await leerEscenas(ctx);
+  const ilustradas = conIlustracion(escenas);
+  const alineaciones = await Promise.all(ilustradas.map(async (e) => ((await leerAlineacion(ctx, e.id)) as { huella?: string } | undefined)?.huella ?? null));
+  const imagenes = await Promise.all(ilustradas.map(async (e) => Promise.all(e.imagenes.map(async (i) => (await leerMetaImagen(ctx, i.id))?.archivo_huella ?? null))));
   return huella(
     "superposiciones",
     VERSION,
     llm.id,
     llm.modelo,
-    ctx.estilo.estilo.superposiciones.activas,
-    conIlustracion(escenas).map((e) => [e.id, e.parte, e.texto_narracion, e.nota_visual ?? null]),
+    estilo.superposiciones,
+    estilo.colores,
+    estilo.tipografia,
+    estilo.subtitulos.posicion,
+    estilo.marca.texto ?? null,
+    ilustradas.map((e, i) => [e.id, e.parte, e.texto_narracion, e.nota_visual ?? null, alineaciones[i], imagenes[i]]),
   );
 };
 
 export const pasoSuperposiciones: Paso = {
   nombre: "superposiciones",
-  titulo: "Textos e íconos",
-  depende: ["escenas"],
+  titulo: "Animaciones",
+  depende: ["alineacion", "imagenes"],
   revision: false,
   huella: huellaEntradas,
   salidas: (ctx) => [rutaSuperposiciones(ctx)],
   async estimar(ctx) {
-    if (!ctx.estilo.estilo.superposiciones.activas) return { costo_usd: 0, unidades: 0, pendientes: 0, detalle: "desactivadas en el estilo" };
+    const { estilo } = ctx.estilo;
+    if (!estilo.superposiciones.activas) return { costo_usd: 0, unidades: 0, pendientes: 0, detalle: "desactivadas en el estilo" };
     const { escenas } = await leerEscenas(ctx);
+    const ilustradas = conIlustracion(escenas);
     const llm = ctx.proveedores.llm();
-    const partes = new Set(conIlustracion(escenas).map((e) => e.parte)).size;
-    const palabrasNarradas = conIlustracion(escenas).reduce((s, e) => s + palabras(e.texto_narracion).length, 0);
-    return { costo_usd: llm.estimarCosto(palabrasNarradas * 1.6 + 1500 * partes, 120 * conIlustracion(escenas).length + 1500 * partes), unidades: partes, pendientes: partes, detalle: `${partes} partes (${llm.modelo})` };
+    const partes = new Set(ilustradas.map((e) => e.parte)).size;
+    const imagenes = ilustradas.reduce((s, e) => s + e.imagenes.length, 0);
+    const revisar = estilo.superposiciones.revision_visual;
+    // Diseño: instrucciones + ~800 tokens por ilustración; ~1.500 de código por escena. Revisión: código + 2 fotogramas por escena.
+    const entrada = 3000 * partes + 800 * imagenes + 300 * ilustradas.length + (revisar ? 3000 * partes + 2300 * ilustradas.length : 0);
+    const salida = 1500 * ilustradas.length * (revisar ? 1.5 : 1);
+    return {
+      costo_usd: llm.estimarCosto(entrada, salida),
+      unidades: partes,
+      pendientes: partes,
+      detalle: `${ilustradas.length} escenas en ${partes} partes${revisar ? " + revisión visual" : ""} (${llm.modelo})`,
+    };
   },
   async ejecutar(ctx) {
     const ruta = rutaSuperposiciones(ctx);
     const estado = ctx.proyecto.pasos.superposiciones;
     if (!ctx.forzarSobrescritura && estado?.huella_salida && (await existe(ruta)) && (await huellaArchivo(ruta)) !== estado.huella_salida) {
-      throw new ErrorGuion2Video(
-        "superposiciones.json tiene ediciones manuales y las escenas cambiaron. Para regenerarlo y perder esas ediciones usa --forzar.",
-        "validacion",
-      );
+      throw new ErrorGuion2Video("superposiciones.json tiene ediciones manuales y las escenas cambiaron. Para regenerarlo y perder esas ediciones usa --forzar.", "validacion");
     }
     const { estilo } = ctx.estilo;
-    const escenas = conIlustracion((await leerEscenas(ctx)).escenas);
     if (!estilo.superposiciones.activas) {
       await escribirJson(ruta, { escenas: {} });
       return { costo_usd: 0, resumen: "desactivadas en el estilo", avisos: [], huella_salida: await huellaArchivo(ruta) };
@@ -129,46 +252,110 @@ export const pasoSuperposiciones: Paso = {
 
     const g = await leerGuion(ctx);
     const llm = ctx.proveedores.llm();
-    const sistema = sistemaSuperposiciones(estilo, NOMBRES_ICONOS);
-    const partes = [...new Set(escenas.map((e) => e.parte))].map((parte) => ({ parte, escenas: escenas.filter((e) => e.parte === parte) }));
+    const datos = await datosEscenas(ctx);
+    const partes = [...new Set(datos.map((d) => d.escena.parte))].map((parte) => datos.filter((d) => d.escena.parte === parte));
+    const revisar = estilo.superposiciones.revision_visual && !ctx.proveedores.simular;
     const forzar = ctx.forzar.has("superposiciones");
+    const sistemaDiseno = sistemaAnimaciones(estilo);
+    const sistemaRevision = sistemaRevisionAnimaciones(estilo);
+    const avisos: string[] = [];
     let hechas = 0;
-    ctx.log.progreso("superposiciones", 0, partes.length);
-    const lote = await enParalelo(partes, 3, async (p) => {
-      const mensaje = mensajeSuperposiciones(g, p.parte, p.escenas);
-      const r = await llmConCache(ctx, {
-        huella: huella("superposiciones-parte", VERSION, llm.id, llm.modelo, sistema, mensaje),
+    ctx.log.progreso("animaciones", 0, partes.length);
+
+    const lote = await enParalelo(partes, 2, async (grupo) => {
+      const parte = grupo[0].escena.parte;
+      const ids = grupo.map((d) => d.escena.id);
+
+      // 1. Diseño: Claude ve las ilustraciones, la narración y el frame de cada palabra.
+      const mensaje = mensajeAnimaciones(
+        g,
+        parte,
+        grupo.map((d) => ({ id: d.escena.id, texto_narracion: d.escena.texto_narracion, nota_visual: d.escena.nota_visual, duracion: d.duracion, fps: estilo.formato.fps, imagenes: d.imagenes.length, palabras: d.palabras })),
+      );
+      const adjuntos = ctx.proveedores.simular
+        ? []
+        : await Promise.all(grupo.flatMap((d) => d.imagenes.map((img, j) => adjuntarImagen(`${d.escena.id} · ilustración ${j + 1}`, ctx.espacio.ruta(img.archivo)))));
+      const diseno = await llmConCache(ctx, {
+        huella: huella("animaciones-diseno", VERSION, llm.id, llm.modelo, sistemaDiseno, mensaje, grupo.map((d) => d.imagenes.map((i) => i.huella))),
         forzar,
         llamar: () =>
-          llm.generarJson({
-            etiqueta: `textos e íconos de "${p.parte}"`,
-            sistema,
-            mensaje,
-            esquema: RespuestaParte,
-            validar: (d) => validarSuperposiciones(p.escenas, d),
-            simulacion: () => simular(p.escenas),
-          }),
+          llm.generarJson({ etiqueta: `animaciones de "${parte}"`, sistema: sistemaDiseno, mensaje, adjuntos, esquema: RespuestaDiseno, validar: (d) => validarCodigos(ids, d), simulacion: () => simular(grupo), maxTokens: 64000 }),
       });
-      const datos = RespuestaParte.parse(r.datos);
-      await registrarCosto(ctx, { paso: "superposiciones", unidad: p.parte, proveedor: llm.id, modelo: r.modelo, costo_usd: r.costoUsd, cache: r.desde_cache });
-      ctx.log.progreso("superposiciones", ++hechas, partes.length, p.parte);
-      return { ...r, datos };
+      await registrarCosto(ctx, { paso: "superposiciones", unidad: parte, proveedor: llm.id, modelo: diseno.modelo, costo_usd: diseno.costoUsd, cache: diseno.desde_cache });
+      let costoParte = diseno.costoUsd;
+      const animaciones = new Map<string, AnimacionEscena & { revisar_en: number[] }>();
+      for (const e of RespuestaDiseno.parse(diseno.datos).escenas) if (e.codigo && ids.includes(e.id)) animaciones.set(e.id, { idea: e.idea, codigo: e.codigo, revisar_en: e.revisar_en });
+
+      // 2. Revisión visual: se renderizan fotogramas reales y Claude corrige lo que no se vea bien.
+      if (revisar && animaciones.size) {
+        const dir = await mkdtemp(join(tmpdir(), "guion2video-revision-"));
+        try {
+          const conAnimacion = grupo.filter((d) => animaciones.has(d.escena.id));
+          const js = new Map([...animaciones].map(([id, a]) => [id, (compilarAnimacion(a.codigo) as { js: string }).js]));
+          const { timeline, inicio } = timelineRevision(ctx, conAnimacion, js);
+          const fotogramas = conAnimacion.flatMap((d) => {
+            const pedidos = animaciones.get(d.escena.id)!.revisar_en.filter((f) => f >= 0 && f < d.duracion);
+            const frames = (pedidos.length ? pedidos : [d.duracion * 0.45, d.duracion * 0.85]).map(Math.round);
+            return frames.map((f) => ({ id: d.escena.id, local: f, frame: inicio.get(d.escena.id)! + f, salida: join(dir, `${d.escena.id}-${f}.jpg`) }));
+          });
+          ctx.log.info(`Renderizando ${fotogramas.length} fotogramas para revisar las animaciones de "${parte}"…`);
+          const { renderizarFotogramas } = await import("@guion2video/render/renderizar");
+          const registro = await renderizarFotogramas({ timeline, dirProyecto: ctx.espacio.dir, fotogramas });
+          const adjuntosRevision: AdjuntoImagen[] = await Promise.all(fotogramas.map(async (f) => ({ etiqueta: `${f.id} · frame ${f.local}`, mime: "image/jpeg" as const, datos: await readFile(f.salida) })));
+          const mensajeRevision = mensajeRevisionAnimaciones(
+            conAnimacion.map((d) => {
+              const a = animaciones.get(d.escena.id)!;
+              return { id: d.escena.id, idea: a.idea, codigo: a.codigo, errores: registro.filter((r) => r.includes(d.escena.id)), fotogramas: fotogramas.filter((f) => f.id === d.escena.id).map((f) => f.local) };
+            }),
+          );
+          const idsRevision = conAnimacion.map((d) => d.escena.id);
+          const revision = await llmConCache(ctx, {
+            huella: huella("animaciones-revision", VERSION, llm.id, llm.modelo, sistemaRevision, mensajeRevision, adjuntosRevision.map((a) => huella(a.datos.toString("base64")))),
+            forzar,
+            llamar: () =>
+              llm.generarJson({
+                etiqueta: `revisión de animaciones de "${parte}"`,
+                sistema: sistemaRevision,
+                mensaje: mensajeRevision,
+                adjuntos: adjuntosRevision,
+                esquema: RespuestaRevision,
+                validar: (r) => validarCodigos(idsRevision, r),
+                simulacion: (): RespuestaRevision => ({ escenas: idsRevision.map((id) => ({ id, ok: true, comentario: "", codigo: null })) }),
+                maxTokens: 64000,
+              }),
+          });
+          await registrarCosto(ctx, { paso: "superposiciones", unidad: `${parte} (revisión)`, proveedor: llm.id, modelo: revision.modelo, costo_usd: revision.costoUsd, cache: revision.desde_cache });
+          costoParte += revision.costoUsd;
+          for (const r of RespuestaRevision.parse(revision.datos).escenas) {
+            const a = animaciones.get(r.id);
+            if (a && !r.ok && r.codigo) animaciones.set(r.id, { ...a, codigo: r.codigo, revision: r.comentario || undefined });
+          }
+        } catch (e) {
+          // La revisión mejora, pero no es imprescindible: si falla, se quedan las animaciones del diseño.
+          avisos.push(`No se pudo revisar visualmente "${parte}": ${(e as Error).message.split("\n")[0].slice(0, 200)}`);
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      }
+      ctx.log.progreso("animaciones", ++hechas, partes.length, parte);
+      return { animaciones, costo: costoParte };
     });
     if (lote.fallidos.length) {
-      throw new ErrorGuion2Video(`Fallaron ${lote.fallidos.length} parte(s):\n${lote.fallidos.map((f) => `  • ${f.item.parte}: ${(f.error as Error).message}`).join("\n")}`, "proveedor");
+      throw new ErrorGuion2Video(`Fallaron ${lote.fallidos.length} parte(s):\n${lote.fallidos.map((f) => `  • ${f.item[0].escena.parte}: ${(f.error as Error).message}`).join("\n")}`, "proveedor");
     }
 
     const archivo: ArchivoSuperposiciones = { escenas: {} };
+    let costo = 0;
     for (const { resultado } of lote.ok) {
-      for (const e of resultado.datos.escenas) if (e.superposiciones.length) archivo.escenas[e.id] = e.superposiciones;
+      costo += resultado.costo;
+      for (const [id, a] of resultado.animaciones) archivo.escenas[id] = { idea: a.idea, revision: a.revision, codigo: a.codigo };
     }
     await escribirJson(ruta, archivo);
-    const total = Object.values(archivo.escenas).reduce((s, l) => s + l.length, 0);
-    const conAlgo = Object.keys(archivo.escenas).length;
+    const n = Object.keys(archivo.escenas).length;
     return {
-      costo_usd: lote.ok.reduce((s, x) => s + x.resultado.costoUsd, 0),
-      resumen: `${total} textos e íconos en ${conAlgo} de ${escenas.length} escenas con ilustración`,
-      avisos: [],
+      costo_usd: costo,
+      resumen: `${n} animaciones en ${datos.length} escenas con ilustración${revisar ? ", revisadas viendo fotogramas" : ""}`,
+      avisos,
       huella_salida: await huellaArchivo(ruta),
     };
   },

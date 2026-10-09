@@ -88,43 +88,105 @@ Responde solo con JSON:
 }`;
 }
 
-export function sistemaSuperposiciones(estilo: Estilo, iconos: readonly string[]): string {
-  return `Eres editor de motion graphics del canal documental "${estilo.nombre}". Las escenas ya tienen su ilustración; tú decides qué textos e íconos animados aparecen ENCIMA de ella para reforzar lo que dice la narración. No cambias la narración ni la imagen.
+/** Lo que puede usar el código de una animación: se comparte entre el diseño y la revisión. */
+function apiAnimaciones(estilo: Estilo): string {
+  const subtitulos = estilo.subtitulos.posicion === "superior" ? "la franja SUPERIOR (de y=40 a y=260)" : "la franja INFERIOR (de y=820 a y=1040)";
+  return `## Lienzo y zonas
+- Lienzo de 1920×1080 a ${estilo.formato.fps} fps, encima de la ilustración (que ya tiene un zoom o paneo lento).
+- Los subtítulos ocupan ${subtitulos}, centrados y de hasta 1500 px de ancho: NUNCA pongas nada ahí.
+- La marca del canal está en la esquina superior derecha (unos 360×110 px): no la tapes.
+- Mira la ilustración y no tapes su punto focal (rostros, el objeto protagonista): usa los espacios vacíos.
 
-## Tipos
-- "palabra_clave": la idea fuerte de la escena en 1 a 4 palabras ("RENDIMIENTOS IMPOSIBLES"). Tarjeta a la derecha, con ícono.
-- "etiqueta": sitúa al espectador: lugar y/o fecha ("Putumayo · 2003"). Esquina superior izquierda.
-- "dato": una cifra que se menciona, con "valor" ("400.000", "150 %") y "texto" corto ("personas afectadas"). Tarjeta a la derecha, con ícono.
-- "sello": palabra de giro dramático en mayúsculas, 1 o 2 palabras ("INTERVENIDA", "QUIEBRA"). Sello rojo en el centro.
+## Identidad visual (obligatoria)
+- Tipografía: SOLO tema.fuentes.titulos ("${estilo.tipografia.titulos}"), tema.fuentes.texto ("${estilo.tipografia.subtitulos}") y tema.fuentes.cifras ("${estilo.tipografia.cifras}").
+- Color: SOLO tema.colores.fondo (${estilo.colores.fondo}), tema.colores.acento (${estilo.colores.acento}), tema.colores.texto (${estilo.colores.texto}) y tema.colores.alerta (${estilo.colores.alerta}), con la transparencia que quieras, más negro/blanco translúcidos para sombras y fondos de legibilidad.
+- Dentro de eso, libertad creativa total: tipografía cinética, revelados con máscara, subrayados que se dibujan, contadores, flechas y trazos SVG, marcadores sobre la imagen, sellos, líneas de tiempo mínimas, íconos, partículas deterministas, etc.
 
-## Reglas
-- 0, 1 o 2 por escena: como máximo una "etiqueta" y uno de los otros tres. Pon algo en más o menos 2 de cada 3 escenas; deja sin nada las escenas donde no aporte.
-- Todo sale de la narración de esa escena: no inventes datos, nombres, lugares ni fechas.
-- "palabra": la palabra EXACTA del texto narrado en la que debe aparecer (la superposición entra cuando la voz la dice). Elige la palabra que remata la idea, no la primera. En "etiqueta" puede omitirse (entra al inicio de la escena).
-- "icono": uno de ${iconos.map((i) => `"${i}"`).join(", ")}. Obligatorio en "palabra_clave" y "dato"; opcional en "etiqueta" (normalmente "lugar" o "fecha"); no se usa en "sello".
-- Usa "sello" con moderación: como mucho uno por parte, solo en un giro real.
-- Español correcto, sin punto final.
+## Código
+Escribe JavaScript con JSX que declare \`function Superposicion({ duracion, palabras, momento })\`. No uses import ni export: ya tienes en el ámbito
+- React, AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, interpolateColors, spring, Easing, random (de Remotion),
+- Iconos: todos los íconos de Lucide por su nombre en PascalCase (\`<Iconos.Banknote size={64} color={tema.colores.acento} />\`),
+- tema: { colores, fuentes: { titulos, texto, cifras }, subtitulos: "inferior" | "superior" }.
+Props: duracion (frames de la escena), palabras ([{ texto, desde, hasta }] en frames desde el inicio de la escena) y momento("palabra") → frame en que la voz empieza a decirla (o null).
+Reglas técnicas:
+- Determinista: el frame decide todo. Prohibido Math.random, Date, fetch, window, document, timers y estado que dependa del tiempo real; para azar usa random("semilla").
+- Sincroniza con la voz: cada elemento entra cuando se dice su palabra (momento) y todo sale con un fundido en los últimos ~10 frames de la escena.
+- Legible: texto de 40 px o más, con contraste suficiente sobre la imagen (sombra o fondo translúcido).
+- Máximo unos 6.000 caracteres por animación.`;
+}
+
+export function sistemaAnimaciones(estilo: Estilo): string {
+  return `Eres director de motion graphics del canal documental "${estilo.nombre}". Cada escena ya tiene su ilustración y su narración; tú diseñas y programas en Remotion la animación que va ENCIMA, para que el video se vea espectacular y refuerce lo que se dice. No cambias la narración ni la imagen.
+
+## Criterio
+- Una idea fuerte por escena, al servicio de la narración: la cifra que se menciona, el lugar y la fecha, la palabra que remata la idea, el giro dramático. Nada de decorar por decorar.
+- Pon animación en más o menos 2 de cada 3 escenas; en las demás deja respirar la ilustración (codigo: null).
+- Varía los recursos entre escenas para que el video no se sienta repetitivo, manteniendo la identidad visual.
+- Con decisión: el protagonista de la animación se lee a primera vista desde un móvil (normalmente 80–180 px). Una esquinita con texto pequeño no aporta; mejor una sola pieza grande y bien compuesta que varias tímidas.
+- Todo dato, nombre, lugar o fecha sale de la narración de esa escena: no inventes.
+
+${apiAnimaciones(estilo)}
 
 ## Formato de respuesta
-Responde solo con JSON:
+Responde solo con JSON (el código va como string JSON, con sus saltos de línea escapados):
 {
   "escenas": [
-    { "id": "escena-003", "superposiciones": [
-      { "tipo": "etiqueta", "texto": "Putumayo · 2003", "icono": "lugar" },
-      { "tipo": "palabra_clave", "texto": "Rendimientos imposibles", "icono": "alerta", "palabra": "imposibles" }
-    ] },
-    { "id": "escena-004", "superposiciones": [] }
+    { "id": "escena-003", "idea": "qué hace la animación, en una frase", "codigo": "function Superposicion({ duracion, momento }) { ... }", "revisar_en": [95, 180] },
+    { "id": "escena-004", "idea": "", "codigo": null, "revisar_en": [] }
   ]
 }
-Incluye todas las escenas que recibes, aunque no lleven nada.`;
+"revisar_en": 1 a 3 frames donde la animación se ve en su mejor momento; se renderizan para revisarla. Incluye todas las escenas que recibes.`;
 }
 
-export function mensajeSuperposiciones(g: GuionEstructurado, parte: string, escenas: { id: string; texto_narracion: string; nota_visual?: string }[]): string {
+export function mensajeAnimaciones(
+  g: GuionEstructurado,
+  parte: string,
+  escenas: { id: string; texto_narracion: string; nota_visual?: string; duracion: number; fps: number; imagenes: number; palabras: { texto: string; desde: number }[] }[],
+): string {
   return `Episodio: "${g.titulo}"
 Parte: "${parte}"
 
-Escenas con ilustración:
-${escenas.map((e) => `${e.id}: ${e.texto_narracion}${e.nota_visual ? `\n   [lo que muestra: ${e.nota_visual}]` : ""}`).join("\n")}`;
+${escenas
+  .map(
+    (e) => `## ${e.id}
+Duración: ${e.duracion} frames (${(e.duracion / e.fps).toFixed(1)} s). Ilustraciones: ${e.imagenes}${e.imagenes > 1 ? " (se reparten la duración a partes iguales)" : ""}; van adjuntas al final con la etiqueta "${e.id} · ilustración".
+Narración: "${e.texto_narracion}"${e.nota_visual ? `\nLo que muestra: ${e.nota_visual}` : ""}
+Palabras (frame de inicio): ${e.palabras.map((p) => `${p.texto}@${p.desde}`).join(" ")}`,
+  )
+  .join("\n\n")}`;
+}
+
+export function sistemaRevisionAnimaciones(estilo: Estilo): string {
+  return `Eres el director de arte que revisa las animaciones de motion graphics del canal "${estilo.nombre}". Recibes, por escena, el código de la animación y fotogramas renderizados del video real (ilustración + animación + subtítulos + marca).
+
+Revisa con ojo exigente:
+- ¿Se lee bien? ¿Tamaño, contraste y jerarquía correctos?
+- ¿Choca con los subtítulos, con la marca o tapa el punto focal de la ilustración?
+- ¿Respeta la tipografía y los colores del estilo? ¿Se ve profesional y cuidada, no genérica?
+- ¿Hay errores del navegador (la animación falló) o algo cortado fuera del lienzo?
+- ¿Refuerza lo que se narra? ¿Tiene impacto, o es tímida (pequeña, arrinconada, sin jerarquía)?
+Si una escena está bien, déjala (ok: true). Si se puede mejorar de forma clara, devuelve el código completo corregido.
+
+${apiAnimaciones(estilo)}
+
+## Formato de respuesta
+Responde solo con JSON:
+{ "escenas": [ { "id": "escena-003", "ok": false, "comentario": "qué cambias y por qué", "codigo": "function Superposicion(...) { ... }" }, { "id": "escena-005", "ok": true, "comentario": "", "codigo": null } ] }
+Incluye todas las escenas que recibes.`;
+}
+
+export function mensajeRevisionAnimaciones(escenas: { id: string; idea: string; codigo: string; errores: string[]; fotogramas: number[] }[]): string {
+  return escenas
+    .map(
+      (e) => `## ${e.id}
+Idea: ${e.idea}
+Fotogramas adjuntos: ${e.fotogramas.join(", ")} (etiquetados "${e.id} · frame N").${e.errores.length ? `\nErrores del navegador:\n${e.errores.map((x) => `- ${x}`).join("\n")}` : ""}
+Código:
+\`\`\`jsx
+${e.codigo}
+\`\`\``,
+    )
+    .join("\n\n");
 }
 
 export function mensajeParte(g: GuionEstructurado, parte: ParteGuion, indice: number): string {

@@ -10,7 +10,7 @@ Convierte un **guion en Markdown** en un **video documental narrado** (16:9, esp
 Funciona como un sistema de compilación: cada paso guarda la huella de sus entradas y solo se vuelve a ejecutar (y a pagar) lo que cambió. Entre los pasos clave hay revisión humana obligatoria, y el costo se estima antes de gastar.
 
 ```
-guion → escenas → voz → alineación → imágenes → textos e íconos → música/efectos → composición → render → publicación
+guion → escenas → voz → alineación → imágenes → animaciones → música/efectos → composición → render → publicación
 ```
 
 Todo corre en tu computador con tus propias claves de API (Anthropic, ElevenLabs, Google, OpenAI…). Puedes probarlo completo **sin claves y sin gastar** en modo simulado.
@@ -86,16 +86,16 @@ En `estilo.json` defines:
 - **imagen**: proveedores principal y premium, el `estilo_prompt` que se añade a cada ilustración, lo que hay que evitar e imágenes de referencia.
 - **ritmo**: segundos por imagen y porcentaje mínimo de gráficos animados.
 - **colores, tipografía** (fuentes de Google disponibles en [fuentes.ts](paquetes/render/src/fuentes.ts)), **subtítulos**, **música**, intro/outro y marca.
-- **superposiciones**: `{ "activas": true }` activa los textos e íconos animados sobre las ilustraciones (ver abajo).
+- **superposiciones**: `{ "activas": true, "revision_visual": true }` activa las animaciones que diseña Claude sobre las ilustraciones (ver abajo).
 - **publicación**: la nota sobre el uso de IA y las llamadas a la acción de la descripción.
 
-### Textos e íconos sobre las ilustraciones
+### Animaciones de Claude sobre las ilustraciones
 
-El paso **Textos e íconos** pide a Claude que proponga, para cada escena con ilustración, hasta dos elementos animados: una **palabra clave** con ícono, una **etiqueta** de lugar o fecha, un **dato** (cifra que cuenta) o un **sello** de giro dramático. Cada uno entra justo cuando la voz dice su palabra ancla, gracias a la alineación palabra por palabra. No toca los prompts ni la narración, así que no genera imágenes ni audio nuevos.
+El paso **Animaciones** le pide a Claude que diseñe y programe en Remotion una animación para cada escena con ilustración, con libertad creativa pero con la tipografía y los colores del estilo: tipografía cinética, contadores, sellos, trazos SVG, íconos de Lucide, etc. Claude ve la ilustración (para no tapar su punto focal), la narración y el frame exacto en que se dice cada palabra, así que cada elemento entra justo cuando la voz lo nombra. No toca los prompts ni la narración: no genera imágenes ni audio nuevos.
 
-El resultado queda en `superposiciones.json` del proyecto y se puede editar a mano (los íconos disponibles están en [iconos.ts](paquetes/render/src/iconos.ts), set Lucide con licencia ISC). Para desactivarlo en un canal: `"superposiciones": { "activas": false }` en su `estilo.json`.
+Con `"revision_visual": true` (por defecto) se renderizan fotogramas reales de cada animación y Claude los revisa y corrige (legibilidad, choques con los subtítulos, impacto). Es más lento pero el resultado es mucho mejor.
 
-Las instrucciones que recibe Claude para dividir en escenas son genéricas para documentales narrados. Si tu canal es de otro género, ajústalas en [prompts.ts](paquetes/pasos/src/prompts.ts).
+El código queda en `superposiciones.json` (JSX, editable a mano). Antes de usarse se compila y se valida: no puede usar red, DOM, almacenamiento, tiempo real ni azar no determinista, y si una animación falla en el render, la escena sigue sin ella. Para desactivarlo en un canal: `"superposiciones": { "activas": false }` en su `estilo.json`.
 
 ## Interfaz web
 
@@ -167,7 +167,7 @@ proyectos/2026-10-dmg/
   fuente/guion-original.md copia del guion (el proyecto es autocontenido)
   guion.md, guion.json     guion limpio y dividido en oraciones numeradas
   escenas.json             escenas (editable a mano o desde la interfaz)
-  superposiciones.json     textos e íconos animados por escena (editable a mano)
+  superposiciones.json     animación (JSX) que diseñó Claude para cada escena (editable a mano)
   audio/escena-001.wav     voz normalizada (-16 LUFS) + .meta.json + .alineacion.json
   audio/mezcla.wav         voz + música con ducking + efectos, a -14 LUFS
   imagenes/escena-001-a.jpg  2560×1440 (2x para el zoom) + .meta.json (prompt, modelo, costo, aprobación)

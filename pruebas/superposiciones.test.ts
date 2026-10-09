@@ -1,81 +1,43 @@
 import { describe, expect, it } from "vitest";
-import type { Escena } from "@guion2video/nucleo";
-import { tiempoSuperposicion, validarSuperposiciones } from "@guion2video/pasos";
+import { compilarAnimacion } from "@guion2video/pasos";
 
-const escena = {
-  id: "escena-003",
-  parte: "Parte 1: La promesa",
-  texto_narracion: "Todo empezó con un local pequeño. La empresa prometía rendimientos imposibles.",
-  tipo_visual: "imagen_ia",
-  imagenes: [],
-  ambiente: { musica: "neutral", efectos: [] },
-} as unknown as Escena;
+const valida = `function Superposicion({ duracion, momento }) {
+  const frame = useCurrentFrame();
+  const entra = momento("imposibles") ?? 0;
+  const t = spring({ frame: frame - entra, fps: 30 });
+  return <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", opacity: t }}>
+    <Iconos.TriangleAlert size={64} color={tema.colores.acento} />
+    <span style={{ fontFamily: tema.fuentes.titulos, fontSize: 96 }}>RENDIMIENTOS IMPOSIBLES</span>
+  </AbsoluteFill>;
+}`;
 
-describe("validarSuperposiciones", () => {
-  it("acepta una etiqueta y una palabra clave ancladas a la narración", () => {
-    const errores = validarSuperposiciones([escena], {
-      escenas: [
-        {
-          id: "escena-003",
-          superposiciones: [
-            { tipo: "etiqueta", texto: "Putumayo · 2003", icono: "lugar" },
-            { tipo: "palabra_clave", texto: "Rendimientos imposibles", icono: "alerta", palabra: "imposibles" },
-          ],
-        },
-      ],
-    });
-    expect(errores).toEqual([]);
+describe("compilarAnimacion", () => {
+  it("compila el JSX de Claude a JavaScript sin JSX", () => {
+    const r = compilarAnimacion(valida);
+    expect("js" in r).toBe(true);
+    if ("js" in r) {
+      expect(r.js).toContain("React.createElement");
+      expect(r.js).toContain("function Superposicion");
+    }
   });
 
-  it("rechaza palabras que no se narran, datos sin valor y escenas que faltan", () => {
-    const errores = validarSuperposiciones([escena, { ...escena, id: "escena-005" }], {
-      escenas: [{ id: "escena-003", superposiciones: [{ tipo: "dato", texto: "personas", palabra: "millones" }] }],
-    });
-    expect(errores.join("\n")).toMatch(/necesita "valor"/);
-    expect(errores.join("\n")).toMatch(/"millones" no está en la narración/);
-    expect(errores.join("\n")).toMatch(/Faltan escenas: escena-005/);
+  it("devuelve el error de sintaxis para que Claude lo corrija", () => {
+    const r = compilarAnimacion("function Superposicion() { return <div>; }");
+    expect("error" in r && r.error.length > 0).toBe(true);
   });
 
-  it("no permite dos tarjetas en la misma escena", () => {
-    const errores = validarSuperposiciones([escena], {
-      escenas: [
-        {
-          id: "escena-003",
-          superposiciones: [
-            { tipo: "palabra_clave", texto: "Local pequeño", palabra: "local" },
-            { tipo: "sello", texto: "ESTAFA", palabra: "imposibles" },
-          ],
-        },
-      ],
-    });
-    expect(errores.join("\n")).toMatch(/máximo una entre/);
-  });
-});
-
-describe("tiempoSuperposicion", () => {
-  const dichas = [
-    { palabra: "La", inicio_ms: 0 },
-    { palabra: "empresa", inicio_ms: 300 },
-    { palabra: "imposibles.", inicio_ms: 2000 },
-  ];
-  const tramo = { inicio: 10_000, finVoz: 13_000, fin: 13_400 };
-
-  it("entra justo antes de que la voz diga la palabra ancla (sin importar tildes ni puntuación)", () => {
-    const t = tiempoSuperposicion({ tipo: "palabra_clave", palabra: "Imposibles" }, dichas, tramo);
-    expect(t.desde).toBe(10_000 + 2000 - 120);
-    expect(t.hasta).toBeGreaterThanOrEqual(t.desde + 1000);
-    expect(t.hasta).toBeLessThanOrEqual(tramo.fin);
-    expect(t.aviso).toBeUndefined();
+  it("exige declarar function Superposicion", () => {
+    const r = compilarAnimacion("const Otra = () => <div>hola, esta animación no tiene el nombre esperado</div>;");
+    expect(r).toEqual({ error: 'debe declarar "function Superposicion(props)"' });
   });
 
-  it("si no encuentra la palabra, entra a mitad de escena y avisa", () => {
-    const t = tiempoSuperposicion({ tipo: "dato", palabra: "millones" }, dichas, tramo);
-    expect(t.desde).toBe(10_000 + 3000 * 0.4);
-    expect(t.aviso).toMatch(/millones/);
+  it.each(["fetch('http://x')", "window.location", "Math.random()", "new Date()", "document.body", "setTimeout(f, 1)"])("bloquea %s", (prohibido) => {
+    const r = compilarAnimacion(`function Superposicion() { ${prohibido}; return null; }`);
+    expect("error" in r && r.error).toMatch(/no está permitido/);
   });
 
-  it("la etiqueta entra al inicio de la escena", () => {
-    const t = tiempoSuperposicion({ tipo: "etiqueta" }, dichas, tramo);
-    expect(t.desde).toBe(10_300);
+  it("no confunde palabras en español con nombres bloqueados", () => {
+    const r = compilarAnimacion(`function Superposicion() { return <span>documento importante del proceso</span>; }`);
+    expect("js" in r).toBe(true);
   });
 });

@@ -8,6 +8,7 @@
     "@guion2video/nucleo": "workspace:*",
     "@guion2video/proveedores": "workspace:*",
     "@guion2video/render": "workspace:*",
+    "esbuild": "0.28.2",
     "sharp": "^0.34.4",
     "zod": "^4.1.12"
   }

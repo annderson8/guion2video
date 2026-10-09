@@ -183,7 +183,8 @@ const SECCIONES: Seccion[] = [
       { ruta: "subtitulos.palabras_por_bloque", etiqueta: "Palabras por bloque", tipo: "numero", paso: 1 },
       { ruta: "subtitulos.posicion", etiqueta: "Posición", tipo: { opciones: ["inferior", "superior"] } },
       { ruta: "marca.texto", etiqueta: "Texto de marca (esquina)", tipo: "texto" },
-      { ruta: "superposiciones.activas", etiqueta: "Textos e íconos sobre las ilustraciones", tipo: "si_no" },
+      { ruta: "superposiciones.activas", etiqueta: "Animaciones de Claude sobre las ilustraciones", tipo: "si_no" },
+      { ruta: "superposiciones.revision_visual", etiqueta: "Claude revisa sus animaciones viendo fotogramas", tipo: "si_no", ayuda: "Más lento, mejor resultado" },
     ],
   },
   {
@@ -311,7 +312,7 @@ function EditorEstilo({ id }: { id: string }) {
 
         <div className="panel rejilla" style={{ position: "sticky", top: 16 }}>
           <h3 style={{ margin: 0 }}>Vista previa en vivo</h3>
-          <p style={{ color: "var(--texto-3)", margin: 0 }}>Colores, tipografía, subtítulos, marca y textos sobre las imágenes, con la demo de 30 s. Se actualiza mientras editas, antes de guardar.</p>
+          <p style={{ color: "var(--texto-3)", margin: 0 }}>Colores, tipografía, subtítulos, marca y dos animaciones de ejemplo, con la demo de 30 s. Se actualiza mientras editas, antes de guardar.</p>
           {timeline && (
             <Player
               component={Video}

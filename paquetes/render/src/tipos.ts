@@ -62,20 +62,18 @@ export interface BloqueSubtitulo {
   palabras: PalabraSubtitulo[];
 }
 
-export type TipoSuperposicion = "palabra_clave" | "etiqueta" | "dato" | "sello";
-
-/** Texto o ícono animado encima de una ilustración. */
+/**
+ * Animación diseñada por Claude para una escena, encima de la ilustración.
+ * `codigo` es JavaScript ya compilado que declara `function Superposicion(props)`.
+ */
 export interface ItemSuperposicion {
   id: string;
   escena: string;
   desde: number;
   duracion: number;
-  tipo: TipoSuperposicion;
-  texto: string;
-  /** Solo en "dato": la cifra protagonista ("400.000", "150 %"). */
-  valor?: string;
-  /** Nombre de ícono de ICONOS (iconos.ts). */
-  icono?: string;
+  codigo: string;
+  /** Palabras narradas con sus frames, relativos al inicio de la escena. */
+  palabras: PalabraSubtitulo[];
 }
 
 export interface EstiloVisual {

@@ -52,10 +52,18 @@ export interface ProveedorImagen {
 
 // ───────── LLM ─────────
 
+/** Imagen que Claude ve junto al mensaje, precedida de su etiqueta ("escena-003 · ilustración"). */
+export interface AdjuntoImagen {
+  etiqueta: string;
+  datos: Buffer;
+  mime: "image/jpeg" | "image/png";
+}
+
 export interface PeticionJson<T> {
   etiqueta: string;
   sistema: string;
   mensaje: string;
+  adjuntos?: AdjuntoImagen[];
   esquema: z.ZodType<T>;
   /** Validación extra (p. ej. que las escenas cubran todas las oraciones). Devuelve errores legibles. */
   validar?: (datos: T) => string[];

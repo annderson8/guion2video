@@ -6,7 +6,7 @@ import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { bundle } from "@remotion/bundler";
-import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
+import { openBrowser, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import type { PropsMiniatura, PropsVideo, Timeline } from "./tipos.ts";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -138,6 +138,46 @@ export async function renderizarVideo(op: OpcionesRender): Promise<void> {
   } finally {
     await servidor.cerrar();
   }
+}
+
+/**
+ * Fotogramas sueltos del video, para que Claude vea cómo quedan sus animaciones sobre la ilustración.
+ * Devuelve los errores y avisos del navegador (p. ej. una animación que falló).
+ */
+export async function renderizarFotogramas(op: {
+  timeline: Timeline;
+  dirProyecto: string;
+  fotogramas: { frame: number; salida: string }[];
+  escala?: number;
+}): Promise<string[]> {
+  const serveUrl = await obtenerBundle();
+  const servidor = await servirCarpeta(op.dirProyecto);
+  const navegador = await openBrowser("chrome");
+  const registro = new Set<string>();
+  try {
+    const inputProps = { timeline: op.timeline, base: servidor.url } as unknown as Record<string, unknown>;
+    const composition = await selectComposition({ serveUrl, id: "Video", inputProps, puppeteerInstance: navegador });
+    for (const f of op.fotogramas) {
+      await renderStill({
+        composition,
+        serveUrl,
+        inputProps,
+        frame: f.frame,
+        output: f.salida,
+        imageFormat: "jpeg",
+        jpegQuality: 85,
+        scale: op.escala ?? 0.5,
+        puppeteerInstance: navegador,
+        onBrowserLog: (l) => {
+          if (l.type === "error" || l.type === "warning") registro.add(l.text.slice(0, 300));
+        },
+      });
+    }
+  } finally {
+    await navegador.close({ silent: true });
+    await servidor.cerrar();
+  }
+  return [...registro];
 }
 
 export async function renderizarMiniatura(op: { props: PropsMiniatura; dirProyecto: string; salida: string }): Promise<void> {

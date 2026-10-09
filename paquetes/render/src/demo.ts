@@ -29,6 +29,37 @@ const video: ItemVideo[] = piezas.map((p, i) => {
   return item;
 });
 
+// Dos animaciones de ejemplo escritas como las escribe Claude (aquí sin JSX, porque la demo no pasa por el compilador).
+const TITULO_CINETICO = `
+function Superposicion({ duracion }) {
+  const h = React.createElement;
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const salida = interpolate(frame, [duracion - 10, duracion], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const palabras = ["LA", "FILA", "NO", "TERMINA"];
+  return h(AbsoluteFill, { style: { justifyContent: "center", paddingLeft: 120, paddingBottom: 200, opacity: salida } },
+    h("div", { style: { display: "flex", gap: 28, alignItems: "center" } },
+      h(Iconos.Users, { size: 92, color: tema.colores.acento, strokeWidth: 2 }),
+      palabras.map((p, i) => {
+        const t = spring({ frame: frame - i * 4, fps, config: { damping: 13 } });
+        return h("span", { key: i, style: { display: "inline-block", fontFamily: tema.fuentes.titulos, fontSize: 140, lineHeight: 1,
+          color: i === 1 ? tema.colores.acento : tema.colores.texto, opacity: t, transform: "translateY(" + (1 - t) * 70 + "px)",
+          textShadow: "0 10px 40px rgba(0,0,0,.7)" } }, p);
+      })));
+}`;
+
+const CONTADOR = `
+function Superposicion({ duracion }) {
+  const h = React.createElement;
+  const frame = useCurrentFrame();
+  const t = interpolate(frame, [0, 40], [0, 1], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const valor = Math.round(400000 * t).toLocaleString("es-CO");
+  return h(AbsoluteFill, { style: { justifyContent: "center", alignItems: "flex-end", paddingRight: 110, paddingBottom: 220 } },
+    h("div", { style: { textAlign: "right", background: "rgba(8,10,14,.75)", padding: "26px 40px", borderRadius: 16, borderRight: "8px solid " + tema.colores.acento } },
+      h("div", { style: { fontFamily: tema.fuentes.cifras, fontSize: 104, color: tema.colores.acento, fontWeight: 700 } }, valor),
+      h("div", { style: { fontFamily: tema.fuentes.texto, fontSize: 40, color: tema.colores.texto } }, "personas afectadas")));
+}`;
+
 const frase = "Noviembre de 2008. Es de madrugada en un pueblo del Putumayo y la fila ya da la vuelta a la manzana.";
 const palabrasDemo = frase.split(" ");
 const porPalabra = s(4.5) / palabrasDemo.length;
@@ -48,10 +79,8 @@ export const TIMELINE_DEMO: Timeline = {
     musica: [],
     efectos: [],
     superposiciones: [
-      { id: "sup-1", escena: "escena-002", desde: s(3.2), duracion: s(3), tipo: "etiqueta", texto: "Putumayo · 2008", icono: "lugar" },
-      { id: "sup-2", escena: "escena-002", desde: s(4.4), duracion: s(2), tipo: "palabra_clave", texto: "La fila no termina", icono: "personas" },
-      { id: "sup-3", escena: "escena-008", desde: s(24.6), duracion: s(2.8), tipo: "sello", texto: "Fraude" },
-      { id: "sup-4", escena: "escena-009", desde: s(27.6), duracion: s(2.3), tipo: "dato", valor: "400.000", texto: "personas afectadas", icono: "dinero" },
+      { id: "sup-1", escena: "escena-002", desde: s(3.2), duracion: s(3.3), codigo: TITULO_CINETICO, palabras: [] },
+      { id: "sup-2", escena: "escena-009", desde: s(27.6), duracion: s(2.4), codigo: CONTADOR, palabras: [] },
     ],
     subtitulos: [0, 1].map((b) => {
       const ps = palabrasDemo.slice(b * 10, b * 10 + 10);
