@@ -133,6 +133,8 @@ Opciones globales: `--simular`, `--verbose`, `--si`. Para ver la pila de un erro
 
 ## Cómo escribir el guion
 
+Guía completa con todas las reglas y una plantilla: [docs/FORMATO-GUION.md](docs/FORMATO-GUION.md).
+
 ¿Tienes el guion en texto normal, sin formato? Pégalo al crear el proyecto y pulsa **Estructurar con Claude**: propone el título, las partes (con su nombre) y detecta la lista de fuentes del final. Claude no reescribe nada: solo indica dónde empieza cada parte, y el Markdown se arma con tu texto original, palabra por palabra. Revísalo y ajústalo antes de crear el proyecto (hay un botón para deshacer).
 
 
