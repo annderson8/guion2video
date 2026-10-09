@@ -71,6 +71,16 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
   const estilos = useDatos<{ id: string; nombre: string }[]>("/estilos");
   const [f, setF] = useState({ slug: "", titulo: "", estilo: "", guion: "", presupuesto_usd: "" });
   const accion = useAccion();
+  const estructura = useAccion();
+  const [previo, setPrevio] = useState<string | null>(null);
+  const tieneEncabezados = /^#{1,2}\s+\S/m.test(f.guion);
+  const estructurar = () =>
+    estructura.ejecutar(async () => {
+      const r = await api.post<{ markdown: string; titulo: string; partes: string[]; fuentes: boolean }>("/guion/estructurar", { texto: f.guion });
+      setPrevio(f.guion);
+      setF((x) => ({ ...x, guion: r.markdown, titulo: x.titulo || r.titulo, slug: x.slug || sugerirSlug(r.titulo) }));
+      return r;
+    }, "Claude propuso el título y las partes sin cambiar tu texto. Revísalo antes de crear el proyecto.");
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const cargarArchivo = async (archivo?: File) => {
     if (!archivo) return;
@@ -107,7 +117,7 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
         </label>
       </div>
       <label>
-        Guion en Markdown
+        Guion (Markdown, o texto normal y luego "Estructurar con Claude")
         <textarea value={f.guion} onChange={set("guion")} rows={12} placeholder={"# Título\n\n## Gancho\n\n[nota visual] Texto que se narra…\n\n## Fuentes\n\n- …"} />
       </label>
       <div className="fila">
@@ -115,6 +125,19 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
           Subir .md
           <input type="file" accept=".md,.markdown,.txt" style={{ display: "none" }} onChange={(e) => cargarArchivo(e.target.files?.[0])} />
         </label>
+        <button
+          className="boton"
+          disabled={estructura.ocupado || !f.guion.trim() || tieneEncabezados}
+          title={tieneEncabezados ? "El guion ya tiene encabezados (# o ##)" : "Claude propone título, partes y fuentes sin cambiar ninguna palabra narrada"}
+          onClick={estructurar}
+        >
+          {estructura.ocupado ? "Claude está leyendo el guion…" : "Estructurar con Claude"}
+        </button>
+        {previo !== null && (
+          <button className="boton chico" disabled={estructura.ocupado} onClick={() => { setF((x) => ({ ...x, guion: previo })); setPrevio(null); }}>
+            Deshacer
+          </button>
+        )}
         <span className="espacio" />
         <button
           className="boton primario"
@@ -129,6 +152,8 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
           Crear proyecto
         </button>
       </div>
+      {estructura.error && <div className="mensaje">{estructura.error}</div>}
+      {estructura.mensaje && previo !== null && <div className="mensaje ok">{estructura.mensaje}</div>}
       {accion.error && <div className="mensaje">{accion.error}</div>}
     </div>
   );
@@ -136,6 +161,6 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
 
 const sugerirSlug = (s: string) => {
   const fecha = new Date().toISOString().slice(0, 7);
-  const base = s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\.md$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  const base = s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\.(md|markdown|txt)$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
   return `${fecha}-${base}`;
 };

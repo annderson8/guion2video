@@ -21,7 +21,7 @@ import {
   Pronunciacion,
   type Config,
 } from "@guion2video/nucleo";
-import { cargarConfigProveedores, probarClaves } from "@guion2video/proveedores";
+import { cargarConfigProveedores, crearProveedores, probarClaves } from "@guion2video/proveedores";
 import {
   aprobar,
   crearContexto,
@@ -30,6 +30,7 @@ import {
   ejecutarHasta,
   estadoProyecto,
   estimarProyecto,
+  estructurarTexto,
   inventarioImagenes,
   leerEscenas,
   leerMetaVoz,
@@ -157,6 +158,12 @@ app.get("/api/proyectos", async () => {
       };
     }),
   );
+});
+
+/** Propone título, partes y fuentes para un guion en texto plano. El texto narrado no cambia. */
+app.post<{ Body: { texto: string } }>("/api/guion/estructurar", async (req) => {
+  const proveedores = await crearProveedores(config);
+  return estructurarTexto(proveedores.llm(), String(req.body?.texto ?? ""));
 });
 
 app.post<{ Body: { slug: string; estilo: string; titulo?: string; guion: string; presupuesto_usd?: number } }>("/api/proyectos", async (req) => {

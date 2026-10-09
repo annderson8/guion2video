@@ -189,6 +189,26 @@ ${e.codigo}
     .join("\n\n");
 }
 
+export function sistemaEstructura(): string {
+  return `Eres editor de guiones de documentales narrados para YouTube. Recibes un guion en texto plano dividido en fragmentos numerados (una oración cada uno). Tu trabajo es SOLO proponer la estructura; no reescribes, no resumes y no cambias ninguna palabra.
+
+## Qué decides
+- "titulo": el título del episodio, atractivo y fiel al contenido (sin clickbait engañoso), en el idioma del texto.
+- "partes": dónde empieza cada parte, por número de fragmento ("desde"). La primera empieza en 0 y se llama "Gancho": los fragmentos iniciales que enganchan (normalmente 1 a 4). Las demás se llaman "Parte N: Nombre" con un nombre corto y evocador de 2 a 5 palabras ("Parte 1: La promesa").
+- Corta donde cambia el tema, la época o el giro de la historia; nunca a mitad de una idea.
+- Número de partes según la extensión: textos de menos de 150 palabras, de 1 a 3 partes; de 150 a 600, de 3 a 4; más largos, una parte cada 400–700 palabras (mínimo 3, son los capítulos de YouTube).
+- "fuentes_desde": si al final hay una lista de fuentes, referencias o enlaces (no narrables), el número del fragmento donde empieza; si no la hay, null.
+
+Responde solo con JSON:
+{ "titulo": "...", "partes": [{ "titulo": "Gancho", "desde": 0 }, { "titulo": "Parte 1: ...", "desde": 3 }], "fuentes_desde": null }`;
+}
+
+export function mensajeEstructura(fragmentos: { texto: string; parrafo: number }[], palabras: number): string {
+  return `Texto de ${palabras} palabras en ${fragmentos.length} fragmentos (las líneas en blanco separan párrafos):
+
+${fragmentos.map((f, i) => `${i > 0 && f.parrafo !== fragmentos[i - 1].parrafo ? "\n" : ""}${i}: ${f.texto}`).join("\n")}`;
+}
+
 export function mensajeParte(g: GuionEstructurado, parte: ParteGuion, indice: number): string {
   const lineas = parte.oraciones.map((o) => `${o.id}: ${o.texto}${o.notas.length ? `\n   [nota del guionista: ${o.notas.join(" · ")}]` : ""}`);
   return `Episodio: "${g.titulo}"

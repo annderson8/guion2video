@@ -15,3 +15,4 @@ export { construirBloques, bloquesASrt, partirLineas } from "./subtitulos.ts";
 export { regionesConVoz, expresionDucking } from "./mezcla.ts";
 export { editarEscena, editarPromptImagen } from "./edicion.ts";
 export { compararProveedoresImagen } from "./comparar.ts";
+export { estructurarTexto, fragmentar, ensamblarEstructura, validarEstructura } from "./estructurar.ts";
