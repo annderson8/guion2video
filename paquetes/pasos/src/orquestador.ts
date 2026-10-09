@@ -7,12 +7,13 @@ import { pasoEscenas } from "./escenas.ts";
 import { pasoVoz } from "./voz.ts";
 import { pasoAlineacion } from "./alineacion.ts";
 import { pasoImagenes } from "./imagenes.ts";
+import { pasoSuperposiciones } from "./superposiciones.ts";
 import { pasoAudioAmbiente } from "./audio-ambiente.ts";
 import { pasoComposicion } from "./composicion.ts";
 import { pasoRender } from "./render.ts";
 import { pasoPublicacion } from "./publicacion.ts";
 
-export const PASOS: Paso[] = [pasoGuion, pasoEscenas, pasoVoz, pasoAlineacion, pasoImagenes, pasoAudioAmbiente, pasoComposicion, pasoRender, pasoPublicacion];
+export const PASOS: Paso[] = [pasoGuion, pasoEscenas, pasoVoz, pasoAlineacion, pasoImagenes, pasoSuperposiciones, pasoAudioAmbiente, pasoComposicion, pasoRender, pasoPublicacion];
 
 export const obtenerPaso = (nombre: string): Paso => {
   const p = PASOS.find((x) => x.nombre === nombre);

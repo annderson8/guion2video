@@ -6,7 +6,8 @@ export { leerEscenas, validarCobertura, ensamblarEscenas, proporcionGraficos } f
 export { leerMetaVoz, type MetaVoz } from "./voz.ts";
 export { leerAlineacion, alinearSecuencias, aPalabrasEscritas } from "./alineacion.ts";
 export { inventarioImagenes, leerMetaImagen, subirImagenPropia, estaAprobada, componerPrompt, type MetaImagen } from "./imagenes.ts";
-export { leerTimeline } from "./composicion.ts";
+export { leerTimeline, tiempoSuperposicion } from "./composicion.ts";
+export { leerSuperposiciones, validarSuperposiciones, ArchivoSuperposiciones, type Superposicion } from "./superposiciones.ts";
 export { renderizarPreview } from "./render.ts";
 export { validarProyecto, promptsRiesgosos } from "./validaciones.ts";
 export { capitulos, textoDescripcion } from "./publicacion.ts";

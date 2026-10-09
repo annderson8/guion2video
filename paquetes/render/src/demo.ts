@@ -47,6 +47,12 @@ export const TIMELINE_DEMO: Timeline = {
     voz: [],
     musica: [],
     efectos: [],
+    superposiciones: [
+      { id: "sup-1", escena: "escena-002", desde: s(3.2), duracion: s(3), tipo: "etiqueta", texto: "Putumayo · 2008", icono: "lugar" },
+      { id: "sup-2", escena: "escena-002", desde: s(4.4), duracion: s(2), tipo: "palabra_clave", texto: "La fila no termina", icono: "personas" },
+      { id: "sup-3", escena: "escena-008", desde: s(24.6), duracion: s(2.8), tipo: "sello", texto: "Fraude" },
+      { id: "sup-4", escena: "escena-009", desde: s(27.6), duracion: s(2.3), tipo: "dato", valor: "400.000", texto: "personas afectadas", icono: "dinero" },
+    ],
     subtitulos: [0, 1].map((b) => {
       const ps = palabrasDemo.slice(b * 10, b * 10 + 10);
       const desde = s(3.2) + Math.round(b * 10 * porPalabra);

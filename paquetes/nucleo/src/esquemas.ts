@@ -69,6 +69,8 @@ export const Estilo = z.object({
     .object({ intro: z.string().optional(), outro: z.string().optional() })
     .default({}),
   marca: z.object({ logo: z.string().optional(), texto: z.string().optional() }).default({}),
+  /** Textos e íconos animados sobre las ilustraciones (los propone Claude; no generan imágenes ni audio). */
+  superposiciones: z.object({ activas: z.boolean().default(true) }).default({ activas: true }),
   publicacion: z
     .object({
       nota_ia: z.string().default(
@@ -261,6 +263,7 @@ export const NOMBRES_PASOS = [
   "voz",
   "alineacion",
   "imagenes",
+  "superposiciones",
   "audio_ambiente",
   "composicion",
   "render",

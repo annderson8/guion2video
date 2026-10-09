@@ -44,7 +44,7 @@ describe("pipeline completo (simulado)", () => {
     expect(est.total).toBe(0);
   });
 
-  it("cambiar el texto de una escena solo regenera su voz y su alineación", async () => {
+  it("cambiar el texto de una escena solo regenera su voz, su alineación y los textos e íconos de su parte", async () => {
     const { escenas } = await leerEscenas(p.ctx);
     const narradas = escenas.filter((e) => e.texto_narracion);
     const objetivo = narradas[1];
@@ -65,7 +65,8 @@ describe("pipeline completo (simulado)", () => {
 
     const nuevos = (await leerJson<RegistroCosto[]>(p.ctx.espacio.rutas.costos)).slice(registrosAntes);
     const pagados = nuevos.filter((r) => !r.cache);
-    expect(pagados.map((r) => [r.paso, r.escena])).toEqual([["voz", objetivo.id]]);
+    const ilustrada = objetivo.tipo_visual === "imagen_ia" || objetivo.tipo_visual === "archivo";
+    expect(pagados.map((r) => [r.paso, r.escena ?? r.unidad])).toEqual([["voz", objetivo.id], ...(ilustrada ? [["superposiciones", objetivo.parte]] : [])]);
     for (const e of otras) expect((await leerMetaVoz(p.ctx, e.id))!.fecha).toBe(vozAntes[e.id]);
     for (const [id, h] of Object.entries(imagenesAntes)) expect((await leerMetaImagen(p.ctx, id))!.archivo_huella).toBe(h);
     expect((await estadoProyecto(p.ctx)).find((e) => e.nombre === "render")!.estado).toBe("obsoleto");

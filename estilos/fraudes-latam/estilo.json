@@ -40,6 +40,7 @@
   },
   "intro_outro": {},
   "marca": { "texto": "FRAUDES LATAM" },
+  "superposiciones": { "activas": true },
   "publicacion": {
     "nota_ia": "Este video usa la voz sintética del creador del canal (clonada con su consentimiento) e ilustraciones generadas con inteligencia artificial. La investigación y el guion son originales y se basan en las fuentes públicas citadas.",
     "llamadas_accion": ["Suscríbete para ver la próxima historia.", "Cuéntanos en los comentarios si alguien que conoces cayó en una pirámide."]

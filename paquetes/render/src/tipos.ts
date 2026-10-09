@@ -62,6 +62,22 @@ export interface BloqueSubtitulo {
   palabras: PalabraSubtitulo[];
 }
 
+export type TipoSuperposicion = "palabra_clave" | "etiqueta" | "dato" | "sello";
+
+/** Texto o ícono animado encima de una ilustración. */
+export interface ItemSuperposicion {
+  id: string;
+  escena: string;
+  desde: number;
+  duracion: number;
+  tipo: TipoSuperposicion;
+  texto: string;
+  /** Solo en "dato": la cifra protagonista ("400.000", "150 %"). */
+  valor?: string;
+  /** Nombre de ícono de ICONOS (iconos.ts). */
+  icono?: string;
+}
+
 export interface EstiloVisual {
   colores: { fondo: string; acento: string; texto: string; alerta: string };
   tipografia: { titulos: string; subtitulos: string; cifras: string };
@@ -85,6 +101,8 @@ export interface Timeline {
     /** Mezcla final (voz + música con ducking + efectos), normalizada. Es lo que suena. */
     mezcla?: ItemAudio;
     subtitulos: BloqueSubtitulo[];
+    /** Opcional: los timelines anteriores a esta pista no la tienen. */
+    superposiciones?: ItemSuperposicion[];
   };
   partes: { titulo: string; desde: number }[];
 }

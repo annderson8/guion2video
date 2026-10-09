@@ -88,6 +88,45 @@ Responde solo con JSON:
 }`;
 }
 
+export function sistemaSuperposiciones(estilo: Estilo, iconos: readonly string[]): string {
+  return `Eres editor de motion graphics del canal documental "${estilo.nombre}". Las escenas ya tienen su ilustración; tú decides qué textos e íconos animados aparecen ENCIMA de ella para reforzar lo que dice la narración. No cambias la narración ni la imagen.
+
+## Tipos
+- "palabra_clave": la idea fuerte de la escena en 1 a 4 palabras ("RENDIMIENTOS IMPOSIBLES"). Tarjeta a la derecha, con ícono.
+- "etiqueta": sitúa al espectador: lugar y/o fecha ("Putumayo · 2003"). Esquina superior izquierda.
+- "dato": una cifra que se menciona, con "valor" ("400.000", "150 %") y "texto" corto ("personas afectadas"). Tarjeta a la derecha, con ícono.
+- "sello": palabra de giro dramático en mayúsculas, 1 o 2 palabras ("INTERVENIDA", "QUIEBRA"). Sello rojo en el centro.
+
+## Reglas
+- 0, 1 o 2 por escena: como máximo una "etiqueta" y uno de los otros tres. Pon algo en más o menos 2 de cada 3 escenas; deja sin nada las escenas donde no aporte.
+- Todo sale de la narración de esa escena: no inventes datos, nombres, lugares ni fechas.
+- "palabra": la palabra EXACTA del texto narrado en la que debe aparecer (la superposición entra cuando la voz la dice). Elige la palabra que remata la idea, no la primera. En "etiqueta" puede omitirse (entra al inicio de la escena).
+- "icono": uno de ${iconos.map((i) => `"${i}"`).join(", ")}. Obligatorio en "palabra_clave" y "dato"; opcional en "etiqueta" (normalmente "lugar" o "fecha"); no se usa en "sello".
+- Usa "sello" con moderación: como mucho uno por parte, solo en un giro real.
+- Español correcto, sin punto final.
+
+## Formato de respuesta
+Responde solo con JSON:
+{
+  "escenas": [
+    { "id": "escena-003", "superposiciones": [
+      { "tipo": "etiqueta", "texto": "Putumayo · 2003", "icono": "lugar" },
+      { "tipo": "palabra_clave", "texto": "Rendimientos imposibles", "icono": "alerta", "palabra": "imposibles" }
+    ] },
+    { "id": "escena-004", "superposiciones": [] }
+  ]
+}
+Incluye todas las escenas que recibes, aunque no lleven nada.`;
+}
+
+export function mensajeSuperposiciones(g: GuionEstructurado, parte: string, escenas: { id: string; texto_narracion: string; nota_visual?: string }[]): string {
+  return `Episodio: "${g.titulo}"
+Parte: "${parte}"
+
+Escenas con ilustración:
+${escenas.map((e) => `${e.id}: ${e.texto_narracion}${e.nota_visual ? `\n   [lo que muestra: ${e.nota_visual}]` : ""}`).join("\n")}`;
+}
+
 export function mensajeParte(g: GuionEstructurado, parte: ParteGuion, indice: number): string {
   const lineas = parte.oraciones.map((o) => `${o.id}: ${o.texto}${o.notas.length ? `\n   [nota del guionista: ${o.notas.join(" · ")}]` : ""}`);
   return `Episodio: "${g.titulo}"

@@ -13,6 +13,7 @@ import {
   MapaRegion,
   MarcaCanal,
   Subtitulos,
+  Superposicion,
   TituloParte,
   Transicion,
 } from "./componentes/index.ts";
@@ -82,6 +83,11 @@ export function Video({ timeline, base }: PropsVideo) {
             ))}
           </>
         )}
+        {(pistas.superposiciones ?? []).map((s) => (
+          <Sequence key={s.id} from={s.desde} durationInFrames={Math.max(1, s.duracion)} name={`${s.escena} · ${s.tipo}`}>
+            <Superposicion item={s} />
+          </Sequence>
+        ))}
         {estilo.subtitulos.activos && <Subtitulos bloques={pistas.subtitulos} resaltar={estilo.subtitulos.resaltar_palabra_actual} />}
         <MarcaCanal />
       </AbsoluteFill>
