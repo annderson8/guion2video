@@ -24,8 +24,12 @@ export function crearJamendo(clientId: string | undefined): ProveedorAudio {
       const params = new URLSearchParams({
         client_id: id,
         format: "json",
-        limit: "30",
+        limit: "200",
         fuzzytags: consulta.replace(/\s+/g, "+"),
+        // La mayor parte del catálogo es "no comercial": se filtra en la propia búsqueda
+        // para que queden pistas usables en videos monetizados (sin NC ni ND).
+        ccnc: "false",
+        ccnd: "false",
         vocalinstrumental: "instrumental",
         audiodlformat: "mp32",
         include: "licenses",
