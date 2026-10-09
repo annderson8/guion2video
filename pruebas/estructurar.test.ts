@@ -26,6 +26,7 @@ describe("estructurar un guion en texto plano", () => {
       { titulo: "Parte 2: La caída", desde: 5 },
     ],
     fuentes_desde: 7,
+    omitir: [] as number[],
   };
 
   it("divide en oraciones sin romper cifras con punto de miles", () => {
@@ -48,5 +49,32 @@ describe("estructurar un guion en texto plano", () => {
     expect(errores).toMatch(/empezar en el fragmento 0/);
     expect(errores).toMatch(/después de la anterior/);
     expect(errores).toMatch(/fuera del texto narrado/);
+  });
+
+  it("las líneas de datos del documento y los títulos escritos en el texto no se narran", () => {
+    const conDatos = `Guion 1 — DMG
+Título sugerido: DMG, la pirámide
+Duración estimada: 21 minutos
+Gancho
+[Imágenes de archivo: filas] Noviembre de 2008. La fila da la vuelta a la manzana.
+Parte 1: El muchacho del Putumayo
+[Mapa del Putumayo] Para entender DMG hay que ir al Putumayo.`;
+    const f = fragmentar(conDatos);
+    const textos = f.fragmentos.map((x) => x.texto);
+    const i = (t: string) => textos.indexOf(t);
+    expect(i("Parte 1: El muchacho del Putumayo")).toBeGreaterThan(0);
+    const r = {
+      titulo: "DMG",
+      partes: [
+        { titulo: "Gancho", desde: 0 },
+        { titulo: "Parte 1: El muchacho del Putumayo", desde: i("Parte 1: El muchacho del Putumayo") },
+      ],
+      fuentes_desde: null,
+      omitir: [i("Guion 1 — DMG"), i("Título sugerido: DMG, la pirámide"), i("Duración estimada: 21 minutos"), i("Gancho"), i("Parte 1: El muchacho del Putumayo")],
+    };
+    expect(validarEstructura(r, textos.length)).toEqual([]);
+    const md = ensamblarEstructura(f.fragmentos, f.parrafos, r);
+    expect(narrado(md)).toBe("Noviembre de 2008. La fila da la vuelta a la manzana. Para entender DMG hay que ir al Putumayo.");
+    expect(md).toContain("<!-- Duración estimada: 21 minutos -->");
   });
 });

@@ -197,10 +197,12 @@ export function sistemaEstructura(): string {
 - "partes": dónde empieza cada parte, por número de fragmento ("desde"). La primera empieza en 0 y se llama "Gancho": los fragmentos iniciales que enganchan (normalmente 1 a 4). Las demás se llaman "Parte N: Nombre" con un nombre corto y evocador de 2 a 5 palabras ("Parte 1: La promesa").
 - Corta donde cambia el tema, la época o el giro de la historia; nunca a mitad de una idea.
 - Número de partes según la extensión: textos de menos de 150 palabras, de 1 a 3 partes; de 150 a 600, de 3 a 4; más largos, una parte cada 400–700 palabras (mínimo 3, son los capítulos de YouTube).
+- Si el texto ya trae los títulos de las partes ("Gancho", "Parte 1: El muchacho del Putumayo", "Cierre"), respeta esa división y usa esos títulos tal cual (añade "Parte N:" si falta, salvo en "Gancho"); la parte empieza en el fragmento de ese título.
 - "fuentes_desde": si al final hay una lista de fuentes, referencias o enlaces (no narrables), el número del fragmento donde empieza; si no la hay, null.
+- "omitir": fragmentos que NO se deben leer en voz alta: datos del documento ("Guion 1 — …", "Título sugerido: …", "Duración estimada: …", autor, fecha de redacción), los títulos de sección escritos dentro del texto ("Gancho", "Parte 1: …", "Cierre"; ya pasan a ser los encabezados) e instrucciones de producción que no estén entre corchetes. No omitas nada que sea narración. Las notas entre [corchetes] déjalas: ya se tratan como notas visuales.
 
 Responde solo con JSON:
-{ "titulo": "...", "partes": [{ "titulo": "Gancho", "desde": 0 }, { "titulo": "Parte 1: ...", "desde": 3 }], "fuentes_desde": null }`;
+{ "titulo": "...", "partes": [{ "titulo": "Gancho", "desde": 0 }, { "titulo": "Parte 1: ...", "desde": 6 }], "fuentes_desde": null, "omitir": [0, 1, 2, 6] }`;
 }
 
 export function mensajeEstructura(fragmentos: { texto: string; parrafo: number }[], palabras: number): string {

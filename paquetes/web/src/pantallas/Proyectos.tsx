@@ -73,12 +73,14 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
   const accion = useAccion();
   const estructura = useAccion();
   const [previo, setPrevio] = useState<string | null>(null);
+  const [omitidos, setOmitidos] = useState<string[]>([]);
   const tieneEncabezados = /^#{1,2}\s+\S/m.test(f.guion);
   const estructurar = () =>
     estructura.ejecutar(async () => {
-      const r = await api.post<{ markdown: string; titulo: string; partes: string[]; fuentes: boolean }>("/guion/estructurar", { texto: f.guion });
+      const r = await api.post<{ markdown: string; titulo: string; partes: string[]; fuentes: boolean; omitidos: string[] }>("/guion/estructurar", { texto: f.guion });
       setPrevio(f.guion);
       setF((x) => ({ ...x, guion: r.markdown, titulo: x.titulo || r.titulo, slug: x.slug || sugerirSlug(r.titulo) }));
+      setOmitidos(r.omitidos);
       return r;
     }, "Claude propuso el título y las partes sin cambiar tu texto. Revísalo antes de crear el proyecto.");
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
@@ -153,7 +155,17 @@ function NuevoProyecto({ alCrear }: { alCrear: (slug: string) => void }) {
         </button>
       </div>
       {estructura.error && <div className="mensaje">{estructura.error}</div>}
-      {estructura.mensaje && previo !== null && <div className="mensaje ok">{estructura.mensaje}</div>}
+      {estructura.mensaje && previo !== null && (
+        <div className="mensaje ok">
+          {estructura.mensaje}
+          {omitidos.length > 0 && (
+            <>
+              {" "}Estas líneas no se narrarán (quedan como comentario {"<!-- -->"} en el guion):
+              <ul style={{ margin: "6px 0 0" }}>{omitidos.map((o, i) => <li key={i}>{o}</li>)}</ul>
+            </>
+          )}
+        </div>
+      )}
       {accion.error && <div className="mensaje">{accion.error}</div>}
     </div>
   );
