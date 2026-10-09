@@ -8,6 +8,7 @@ import { crearVozSimulada } from "./voz/simulado.ts";
 import { crearNanoBanana } from "./imagen/google-nano-banana.ts";
 import { crearGptImage } from "./imagen/openai-gpt-image.ts";
 import { crearFal } from "./imagen/fal.ts";
+import { crearAtlas } from "./imagen/atlas.ts";
 import { crearImagenSimulada } from "./imagen/simulado.ts";
 import { crearAnthropic } from "./llm/anthropic.ts";
 import { crearLlmSimulado } from "./llm/simulado.ts";
@@ -72,6 +73,7 @@ export async function crearProveedores(
         if (id === "google-nano-banana-2") return crearNanoBanana(k.GOOGLE_API_KEY, c, costos);
         if (id === "openai-gpt-image-2") return crearGptImage(k.OPENAI_API_KEY, c, costos);
         if (id.startsWith("fal-")) return crearFal(id, k.FAL_API_KEY, c, costos);
+        if (id.startsWith("atlas-")) return crearAtlas(id, k.ATLAS_API_KEY, c, costos);
         return desconocido("imagen", id);
       }),
     llm: () =>

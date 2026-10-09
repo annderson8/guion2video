@@ -13,7 +13,7 @@ interface Config {
 interface Prueba { clave: string; presente: boolean; ok?: boolean; detalle: string }
 
 const VOCES = ["elevenlabs", "cartesia", "local-say"];
-const IMAGENES = ["google-nano-banana-2", "openai-gpt-image-2", "fal-seedream", "fal-flux"];
+const IMAGENES = ["google-nano-banana-2", "openai-gpt-image-2", "fal-seedream", "fal-flux", "atlas-seedream", "atlas-nano-banana-2"];
 const AUDIO = ["jamendo", "freesound", "biblioteca"];
 
 export function Configuracion() {

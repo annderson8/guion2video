@@ -29,6 +29,15 @@ export async function probarClaves(config: Config): Promise<ResultadoPrueba[]> {
       return "ok";
     },
     FAL_API_KEY: async () => "presente (fal.ai no tiene un endpoint de prueba gratuito)",
+    ATLAS_API_KEY: async (v) => {
+      // Consulta una predicción inexistente: 404 = clave válida, 401 = clave rechazada.
+      const r = await fetch("https://api.atlascloud.ai/api/v1/model/prediction/prueba-clave", {
+        headers: { authorization: `Bearer ${v}` },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (r.status === 401 || r.status === 403) throw new Error(`HTTP ${r.status}: clave rechazada`);
+      return "ok";
+    },
     ELEVENLABS_API_KEY: async (v) => {
       await pedir("elevenlabs", "https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": v }, timeoutMs: 15000 });
       return "ok";

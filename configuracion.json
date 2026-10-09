@@ -11,7 +11,9 @@
     "google-nano-banana-2": { "modelo": "gemini-nano-banana-2.1", "tamano": "2K", "tamano_premium": "4K" },
     "openai-gpt-image-2": { "modelo": "gpt-image-2", "tamano": "1536x1024", "calidad_estandar": "medium", "calidad_premium": "high" },
     "fal-seedream": { "modelo": "fal-ai/bytedance/seedream/v4/text-to-image", "tamano": "landscape_16_9" },
-    "fal-flux": { "modelo": "fal-ai/flux/schnell", "tamano": "landscape_16_9" }
+    "fal-flux": { "modelo": "fal-ai/flux/schnell", "tamano": "landscape_16_9" },
+    "atlas-seedream": { "modelo": "bytedance/seedream-v4.7/text-to-image", "parametros": { "size": "2560*1440" } },
+    "atlas-nano-banana-2": { "modelo": "google/nano-banana-2/text-to-image", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } }
   },
   "transcripcion": { "proveedor": "openai-whisper", "modelo": "whisper-1" },
   "imagenes": { "paralelo": 4, "reintentos": 3, "ancho_salida": 2560, "alto_salida": 1440 }

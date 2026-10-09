@@ -18,6 +18,8 @@
     "openai-gpt-image-2": { "estandar": 0.041, "premium": 0.165 },
     "fal-seedream": { "estandar": 0.03 },
     "fal-flux": { "estandar": 0.003 },
+    "atlas-seedream": { "estandar": 0.03 },
+    "atlas-nano-banana-2": { "estandar": 0.12, "premium": 0.16 },
     "simulado": { "estandar": 0, "premium": 0 }
   },
   "transcripcion": {

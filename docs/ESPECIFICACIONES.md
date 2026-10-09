@@ -295,6 +295,7 @@ Regla: **al menos 25 % de las escenas deben ser gráficos animados** (cifras, ma
   1. **Google Nano Banana 2** (Gemini 3.1 Flash Image) — principal, buena relación calidad-precio y admite imágenes de referencia para mantener el estilo.
   2. **OpenAI GPT Image 2** — calidad premium y texto dentro de la imagen; se usa en escenas marcadas `"calidad": "premium"` y en la miniatura.
   3. **Seedream o FLUX vía fal.ai** — alternativa barata para volumen.
+  4. **Atlas Cloud** — agregador con una sola clave (Seedream v4.7, Nano Banana 2…); API asíncrona.
 - **No usar** `gpt-image-1.5`, `gpt-image-1-mini` ni Imagen 4: están retirados o se retiran el 1 de diciembre de 2026.
 - Los nombres de modelo van en configuración, nunca en el código.
 - Generar en paralelo con un límite configurable (por defecto 4 a la vez) y reintentos con espera exponencial.
@@ -469,6 +470,7 @@ ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 GOOGLE_API_KEY=
 FAL_API_KEY=
+ATLAS_API_KEY=
 ELEVENLABS_API_KEY=
 CARTESIA_API_KEY=
 JAMENDO_CLIENT_ID=

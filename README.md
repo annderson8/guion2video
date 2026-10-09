@@ -182,7 +182,7 @@ proyectos/2026-10-dmg/
 ```
 paquetes/
   nucleo/       esquemas Zod, huellas, costos y presupuesto, cola de trabajos, proyecto (no sabe nada de video)
-  proveedores/  voz (ElevenLabs, Cartesia, voz local de macOS), imagen (Nano Banana 2, GPT Image 2, fal.ai),
+  proveedores/  voz (ElevenLabs, Cartesia, voz local de macOS), imagen (Nano Banana 2, GPT Image 2, fal.ai, Atlas Cloud),
                 LLM (Claude), transcripción (Whisper), música/efectos (Jamendo, FreeSound, biblioteca) y sus simulados
   pasos/        un archivo por paso + orquestador (estado, dependencias, revisión, presupuesto) + validaciones
   render/       proyecto Remotion: componentes, timeline.json → MP4 (no llama a ninguna API de pago)
