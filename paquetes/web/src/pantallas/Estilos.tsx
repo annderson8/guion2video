@@ -10,8 +10,11 @@ interface ResumenEstilo {
   nombre: string;
   idioma?: string;
   colores?: Record<string, string>;
-  proyectos: string[];
+  /** Falta si la API es de una versión anterior: entonces no puede editar estilos. */
+  proyectos?: string[];
 }
+
+const API_ANTIGUA = "La API que está corriendo es de una versión anterior y no sabe editar estilos. Reiníciala: para \"pnpm dev\" con Ctrl+C y vuelve a lanzarlo.";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Json = Record<string, any>;
@@ -37,6 +40,7 @@ function ListaEstilos() {
   const [idTocado, setIdTocado] = useState(false);
   const accion = useAccion();
   if (!datos) return <div className="cargando">Cargando…</div>;
+  if (datos.some((e) => !e.proyectos)) return <div className="mensaje">{API_ANTIGUA}</div>;
   const base = f.base || datos[0]?.id || "";
   const id = idTocado ? f.id : aId(f.nombre);
   const crear = () =>
@@ -61,7 +65,7 @@ function ListaEstilos() {
               </span>
             </div>
             <span className="mono" style={{ color: "var(--texto-3)" }}>
-              {e.id} · {e.idioma ?? "es"} · {e.proyectos.length === 1 ? "1 proyecto" : `${e.proyectos.length} proyectos`}
+              {e.id} · {e.idioma ?? "es"} · {e.proyectos?.length === 1 ? "1 proyecto" : `${e.proyectos?.length ?? 0} proyectos`}
             </span>
           </a>
         ))}
@@ -231,7 +235,7 @@ function EditorEstilo({ id }: { id: string }) {
   const filas = pron ?? Object.entries(datos?.pronunciacion ?? {});
   const timeline = useMemo<Timeline | null>(() => (estilo?.colores && estilo?.tipografia ? { ...TIMELINE_DEMO, estilo: aVisual(estilo) } : null), [estilo]);
 
-  if (error) return <div className="mensaje">{error}</div>;
+  if (error) return <div className="mensaje">{error === "No encontrado" ? API_ANTIGUA : error}</div>;
   if (!datos || !estilo) return <div className="cargando">Cargando…</div>;
 
   const cambiadas = SECCIONES.filter((s) => s.campos.some((c) => JSON.stringify(leer(estilo, c.ruta)) !== JSON.stringify(leer(datos.estilo, c.ruta))));
