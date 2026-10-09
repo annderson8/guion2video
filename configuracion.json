@@ -7,7 +7,7 @@
     "local-say": { "voz": "Paulina", "palabras_por_minuto": 170 }
   },
   "imagen": {
-    "google-nano-banana-2": { "modelo": "gemini-3.1-flash-image-preview", "tamano": "2K" },
+    "google-nano-banana-2": { "modelo": "gemini-nano-banana-2.1", "tamano": "2K", "tamano_premium": "4K" },
     "openai-gpt-image-2": { "modelo": "gpt-image-2", "tamano": "1536x1024", "calidad_estandar": "medium", "calidad_premium": "high" },
     "fal-seedream": { "modelo": "fal-ai/bytedance/seedream/v4/text-to-image", "tamano": "landscape_16_9" },
     "fal-flux": { "modelo": "fal-ai/flux/schnell", "tamano": "landscape_16_9" }

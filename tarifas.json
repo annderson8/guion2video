@@ -14,7 +14,7 @@
     "simulado": { "por_mil_caracteres": 0 }
   },
   "imagen": {
-    "google-nano-banana-2": { "estandar": 0.101, "premium": 0.151 },
+    "google-nano-banana-2": { "estandar": 0.0504, "premium": 0.113 },
     "openai-gpt-image-2": { "estandar": 0.041, "premium": 0.165 },
     "fal-seedream": { "estandar": 0.03 },
     "fal-flux": { "estandar": 0.003 },
