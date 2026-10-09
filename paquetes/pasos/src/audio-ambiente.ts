@@ -29,7 +29,21 @@ export const CONSULTAS_MUSICA: Record<string, string> = {
   caos: "chaotic dark",
 };
 
+/** Si la búsqueda principal no da nada, se prueba con estas, de más concreta a más amplia. */
+const CONSULTAS_ALTERNATIVAS: Record<string, string[]> = {
+  neutral: ["ambient", "documentary"],
+  tension_baja: ["dark ambient", "suspense", "cinematic tension", "dark"],
+  tension_alta: ["thriller", "tension", "dark cinematic"],
+  revelacion: ["cinematic", "dramatic", "epic"],
+  tribunal: ["investigation", "serious", "dark ambient"],
+  nostalgia: ["melancholic", "piano", "sad"],
+  esperanza: ["hopeful", "inspiring", "piano"],
+  caos: ["chaos", "intense", "dark"],
+};
+
 export interface Pista {
+  /** Si esta parte no encontró música propia y usa la de otra parte. */
+  prestada_de?: string;
   archivo: string;
   etiqueta: string;
   titulo: string;
@@ -108,7 +122,10 @@ export const pasoAudioAmbiente: Paso = {
     const { escenas } = await leerEscenas(ctx);
     const p = planear(escenas);
     const m = ctx.estilo.estilo.musica;
-    return huella("ambiente", VERSION, p.partes, p.efectos, m.proveedor, m.efectos_proveedor, ctx.proveedores.simular);
+    // Las partes que se quedaron sin música cuentan como pendientes: así se reintentan al volver a ejecutar.
+    const previa = await leerJsonSiExiste<ArchivoMusica>(ctx.espacio.ruta("ambiente", "musica.json"));
+    const sinMusica = Object.entries(previa?.partes ?? {}).filter(([, v]) => !v).map(([k]) => k);
+    return huella("ambiente", VERSION, p.partes, p.efectos, m.proveedor, m.efectos_proveedor, ctx.proveedores.simular, ...(sinMusica.length ? [sinMusica] : []));
   },
   salidas: (ctx) => [ctx.espacio.ruta("ambiente", "musica.json"), ctx.espacio.ruta("ambiente", "efectos.json"), ctx.espacio.ruta("ambiente", "creditos.json")],
   async estimar(ctx) {
@@ -154,11 +171,15 @@ export const pasoAudioAmbiente: Paso = {
         continue;
       }
       try {
-        const candidatos = await provMusica.buscar({ tipo: "musica", etiqueta: p.etiqueta, consulta: CONSULTAS_MUSICA[p.etiqueta] ?? p.etiqueta.replace(/_/g, " "), duracionMinS: 90 });
+        const consultas = [CONSULTAS_MUSICA[p.etiqueta] ?? p.etiqueta.replace(/_/g, " "), ...(CONSULTAS_ALTERNATIVAS[p.etiqueta] ?? [])];
+        let candidatos: CandidatoAudio[] = [];
+        for (const consulta of consultas) {
+          candidatos = await provMusica.buscar({ tipo: "musica", etiqueta: p.etiqueta, consulta, duracionMinS: 90 });
+          if (candidatos.length) break;
+        }
         const libres = candidatos.filter((c) => !usadas.has(c.titulo));
         const elegido = (libres.length ? libres : candidatos)[libres.length ? 0 : p.ordinal % Math.max(1, candidatos.length)];
         if (!elegido) {
-          avisos.push(`No encontré música "${p.etiqueta}" para "${p.parte}" (${provMusica.id}). Añade pistas en biblioteca/musica/${p.etiqueta}/`);
           musica.partes[p.clave] = null;
           continue;
         }
@@ -171,6 +192,20 @@ export const pasoAudioAmbiente: Paso = {
         avisos.push(`Música de "${p.parte}": ${(e as Error).message.slice(0, 200)}`);
         musica.partes[p.clave] = null;
       }
+    }
+
+    // Plan B: una parte sin música usa la de otra parte con el mismo ambiente (o, si no hay, la más cercana).
+    for (const p of plan.partes) {
+      if (musica.partes[p.clave]) continue;
+      const otras = plan.partes.filter((o) => o.clave !== p.clave && musica.partes[o.clave] && !musica.partes[o.clave]!.prestada_de);
+      const donante = otras.find((o) => o.etiqueta === p.etiqueta) ?? [...otras].sort((a, b) => Math.abs(a.ordinal - p.ordinal) - Math.abs(b.ordinal - p.ordinal))[0];
+      if (!donante) {
+        avisos.push(`No encontré música "${p.etiqueta}" para "${p.parte}" (${provMusica.id}). Añade pistas en biblioteca/musica/${p.etiqueta}/`);
+        continue;
+      }
+      const pista = musica.partes[donante.clave]!;
+      musica.partes[p.clave] = { ...pista, prestada_de: donante.clave, huella: huella(VERSION, provMusica.id, p.etiqueta, p.ordinal, referencia) };
+      avisos.push(`"${p.parte}" no encontró música "${p.etiqueta}" propia: usa la de "${donante.parte}"${donante.etiqueta === p.etiqueta ? "" : ` (${donante.etiqueta})`}`);
     }
 
     // Efectos: un archivo por efecto distinto.
