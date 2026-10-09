@@ -28,6 +28,8 @@ export interface Proveedores {
   voz(id: string): ProveedorVoz;
   imagen(id: string): ProveedorImagen;
   llm(): ProveedorLlm;
+  /** LLM para las animaciones (configuracion.json → animaciones); si no está configurado, el mismo que llm(). */
+  llmAnimaciones(): ProveedorLlm;
   transcripcion(): ProveedorTranscripcion;
   audio(id: string): ProveedorAudio;
 }
@@ -48,6 +50,13 @@ export async function crearProveedores(
   const memo = <T>(clave: string, crear: () => T): T => {
     if (!cache.has(clave)) cache.set(clave, crear());
     return cache.get(clave) as T;
+  };
+  const crearLlm = (c: ConfigProveedores["llm"]): ProveedorLlm => {
+    if (simular) return crearLlmSimulado(costos);
+    // Uso personal: Claude Code con la sesión de tu suscripción (rama local "personal").
+    if (c.proveedor === "claude-cli") return crearClaudeCli(c);
+    if (c.proveedor !== "anthropic") return desconocido("LLM", c.proveedor);
+    return crearAnthropic(k.ANTHROPIC_API_KEY, c, costos);
   };
   const desconocido = (tipo: string, id: string): never => {
     throw new ErrorGuion2Video(`Proveedor de ${tipo} desconocido: "${id}"`, "configuracion");
@@ -76,13 +85,11 @@ export async function crearProveedores(
         if (id.startsWith("atlas-")) return crearAtlas(id, k.ATLAS_API_KEY, c, costos);
         return desconocido("imagen", id);
       }),
-    llm: () =>
-      memo("llm", () => {
-        if (simular) return crearLlmSimulado(costos);
-        // Uso personal: Claude Code con la sesión de tu suscripción (rama local "personal").
-        if (cfg.llm.proveedor === "claude-cli") return crearClaudeCli(cfg.llm);
-        if (cfg.llm.proveedor !== "anthropic") return desconocido("LLM", cfg.llm.proveedor);
-        return crearAnthropic(k.ANTHROPIC_API_KEY, cfg.llm, costos);
+    llm: () => memo("llm", () => crearLlm(cfg.llm)),
+    llmAnimaciones: () =>
+      memo("llm-animaciones", () => {
+        if (simular || !cfg.animaciones) return memo("llm", () => crearLlm(cfg.llm));
+        return crearLlm({ ...cfg.llm, modelo: cfg.animaciones.modelo, esfuerzo: cfg.animaciones.esfuerzo });
       }),
     transcripcion: () =>
       memo("transcripcion", () => {

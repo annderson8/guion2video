@@ -340,6 +340,13 @@ export const ConfigProveedores = z.object({
     modelo: z.string(),
     esfuerzo: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
   }),
+  /**
+   * Modelo y esfuerzo solo para las animaciones: son muchas llamadas que generan mucho código,
+   * y con Opus en esfuerzo alto agotan rápido una suscripción. Si falta, se usa "llm".
+   */
+  animaciones: z
+    .object({ modelo: z.string(), esfuerzo: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"), paralelo: z.number().int().min(1).default(1) })
+    .optional(),
   voz: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   imagen: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   transcripcion: z.object({ proveedor: z.string(), modelo: z.string() }),

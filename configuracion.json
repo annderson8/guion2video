@@ -1,6 +1,7 @@
 {
   "$comentario": "Nombres de modelo y opciones por proveedor. Cámbialos aquí, nunca en el código. Verifica los IDs vigentes en la documentación de cada proveedor.",
   "llm": { "proveedor": "claude-cli", "modelo": "opus", "esfuerzo": "high" },
+  "animaciones": { "modelo": "sonnet", "esfuerzo": "medium", "paralelo": 1 },
   "$llm_api": "Para usar la API en vez de la suscripción: \"llm\": { \"proveedor\": \"anthropic\", \"modelo\": \"claude-opus-5-5\", \"esfuerzo\": \"high\" } y ANTHROPIC_API_KEY en .env",
   "voz": {
     "elevenlabs": { "modelo": "eleven_multilingual_v2", "formato": "mp3_44100_128" },

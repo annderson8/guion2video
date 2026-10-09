@@ -192,7 +192,7 @@ function timelineRevision(ctx: ContextoPaso, datos: DatosEscena[], codigos: Map<
 }
 
 const huellaEntradas = async (ctx: ContextoPaso) => {
-  const llm = ctx.proveedores.llm();
+  const llm = ctx.proveedores.llmAnimaciones();
   const { estilo } = ctx.estilo;
   const { escenas } = await leerEscenas(ctx);
   const ilustradas = conIlustracion(escenas);
@@ -224,7 +224,7 @@ export const pasoSuperposiciones: Paso = {
     if (!estilo.superposiciones.activas) return { costo_usd: 0, unidades: 0, pendientes: 0, detalle: "desactivadas en el estilo" };
     const { escenas } = await leerEscenas(ctx);
     const ilustradas = conIlustracion(escenas);
-    const llm = ctx.proveedores.llm();
+    const llm = ctx.proveedores.llmAnimaciones();
     const partes = new Set(ilustradas.map((e) => e.parte)).size;
     const imagenes = ilustradas.reduce((s, e) => s + e.imagenes.length, 0);
     const revisar = estilo.superposiciones.revision_visual;
@@ -251,7 +251,10 @@ export const pasoSuperposiciones: Paso = {
     }
 
     const g = await leerGuion(ctx);
-    const llm = ctx.proveedores.llm();
+    const llm = ctx.proveedores.llmAnimaciones();
+    // Lo que ya se generó con el modelo general (antes de separar el de animaciones) se reutiliza.
+    const general = ctx.proveedores.llm();
+    const conOtroModelo = (...partes: unknown[]) => (general.modelo === llm.modelo ? [] : [huella(...partes.map((p) => (p === llm.modelo ? general.modelo : p === llm.id ? general.id : p)))]);
     const datos = await datosEscenas(ctx);
     const partes = [...new Set(datos.map((d) => d.escena.parte))].map((parte) => datos.filter((d) => d.escena.parte === parte));
     const revisar = estilo.superposiciones.revision_visual && !ctx.proveedores.simular;
@@ -262,7 +265,7 @@ export const pasoSuperposiciones: Paso = {
     let hechas = 0;
     ctx.log.progreso("animaciones", 0, partes.length);
 
-    const lote = await enParalelo(partes, 2, async (grupo) => {
+    const lote = await enParalelo(partes, ctx.proveedores.config.animaciones?.paralelo ?? 1, async (grupo) => {
       const parte = grupo[0].escena.parte;
       const ids = grupo.map((d) => d.escena.id);
 
@@ -277,6 +280,7 @@ export const pasoSuperposiciones: Paso = {
         : await Promise.all(grupo.flatMap((d) => d.imagenes.map((img, j) => adjuntarImagen(`${d.escena.id} · ilustración ${j + 1}`, ctx.espacio.ruta(img.archivo)))));
       const diseno = await llmConCache(ctx, {
         huella: huella("animaciones-diseno", VERSION, llm.id, llm.modelo, sistemaDiseno, mensaje, grupo.map((d) => d.imagenes.map((i) => i.huella))),
+        alternativas: conOtroModelo("animaciones-diseno", VERSION, llm.id, llm.modelo, sistemaDiseno, mensaje, grupo.map((d) => d.imagenes.map((i) => i.huella))),
         forzar,
         llamar: () =>
           llm.generarJson({ etiqueta: `animaciones de "${parte}"`, sistema: sistemaDiseno, mensaje, adjuntos, esquema: RespuestaDiseno, validar: (d) => validarCodigos(ids, d), simulacion: () => simular(grupo), maxTokens: 64000 }),
@@ -311,6 +315,7 @@ export const pasoSuperposiciones: Paso = {
           const idsRevision = conAnimacion.map((d) => d.escena.id);
           const revision = await llmConCache(ctx, {
             huella: huella("animaciones-revision", VERSION, llm.id, llm.modelo, sistemaRevision, mensajeRevision, adjuntosRevision.map((a) => huella(a.datos.toString("base64")))),
+            alternativas: conOtroModelo("animaciones-revision", VERSION, llm.id, llm.modelo, sistemaRevision, mensajeRevision, adjuntosRevision.map((a) => huella(a.datos.toString("base64")))),
             forzar,
             llamar: () =>
               llm.generarJson({

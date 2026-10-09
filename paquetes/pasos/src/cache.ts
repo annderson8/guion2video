@@ -62,12 +62,14 @@ export async function registrarCosto(
  */
 export async function llmConCache<T>(
   ctx: ContextoPaso,
-  op: { huella: string; forzar?: boolean; llamar: () => Promise<{ datos: T; costoUsd: number; modelo: string; tokens: unknown }> },
+  op: { huella: string; forzar?: boolean; /** Otras huellas válidas (p. ej. la misma petición hecha con otro modelo). */ alternativas?: string[]; llamar: () => Promise<{ datos: T; costoUsd: number; modelo: string; tokens: unknown }> },
 ): Promise<{ datos: T; costoUsd: number; modelo: string; desde_cache: boolean }> {
   const ruta = join(ctx.espacio.rutas.cache, "llm", `${op.huella}.json`);
   if (!op.forzar) {
-    const previo = await leerJsonSiExiste<{ datos: T; modelo: string }>(ruta);
-    if (previo) return { datos: previo.datos, modelo: previo.modelo, costoUsd: 0, desde_cache: true };
+    for (const h of [op.huella, ...(op.alternativas ?? [])]) {
+      const previo = await leerJsonSiExiste<{ datos: T; modelo: string }>(join(ctx.espacio.rutas.cache, "llm", `${h}.json`));
+      if (previo) return { datos: previo.datos, modelo: previo.modelo, costoUsd: 0, desde_cache: true };
+    }
   }
   const r = await op.llamar();
   await escribirJson(ruta, { datos: r.datos, modelo: r.modelo, costo_usd: r.costoUsd, tokens: r.tokens, fecha: new Date().toISOString() });
