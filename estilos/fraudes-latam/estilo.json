@@ -5,7 +5,7 @@
   "formato": { "ancho": 1920, "alto": 1080, "fps": 30 },
   "voz": {
     "proveedor": "elevenlabs",
-    "voz_id": "VOZ_CLONADA_ID",
+    "voz_id": "Gbi7AdGeWcqZDLabwWhj",
     "velocidad": 0.95,
     "estabilidad": 0.5,
     "similitud": 0.8,
