@@ -92,6 +92,7 @@ export async function normalizarSonoridad(
       : "anull"; // silencio total: no hay nada que normalizar
   await ffmpeg([
     "-i", entrada,
+    "-vn", // descarta la carátula que traen muchos MP3 (rompe la salida .m4a)
     "-af", filtro,
     "-ar", String(op.frecuencia ?? 48000),
     "-ac", String(op.canales ?? 1),
