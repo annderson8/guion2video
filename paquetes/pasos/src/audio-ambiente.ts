@@ -15,7 +15,7 @@ import type { Paso } from "./paso.ts";
 import { registrarCosto } from "./cache.ts";
 import { leerEscenas } from "./escenas.ts";
 
-const VERSION = 2;
+const VERSION = 3;
 
 /** Etiqueta de ambiente → términos de búsqueda en las bibliotecas (en inglés, que es como están etiquetadas). */
 export const CONSULTAS_MUSICA: Record<string, string> = {
