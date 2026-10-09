@@ -16,7 +16,7 @@
   },
   "imagen": {
     "proveedor_principal": "google-nano-banana-2",
-    "proveedor_premium": "openai-gpt-image-2",
+    "proveedor_premium": "google-nano-banana-2",
     "estilo_prompt": "ilustración editorial estilo documental, pintura digital, luz cinematográfica, paleta ocre y azul oscuro, textura de grano, sin texto",
     "negativo": "fotografía realista de personas reales, logotipos, marcas de agua, texto ilegible",
     "imagenes_referencia": [],
