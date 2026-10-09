@@ -20,6 +20,8 @@ const FUENTES: Record<string, Cargador> = {
   Roboto: () => import("@remotion/google-fonts/Roboto"),
 };
 
+export const NOMBRES_FUENTES = Object.keys(FUENTES);
+
 const cargadas = new Map<string, Promise<void>>();
 
 export function cargarFuentes(nombres: string[]): void {

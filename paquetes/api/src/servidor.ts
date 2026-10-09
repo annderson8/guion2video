@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
+import { cp, readdir, readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, normalize, sep } from "node:path";
 import Fastify, { type FastifyReply } from "fastify";
@@ -9,6 +9,7 @@ import {
   cargarEnv,
   enmascarar,
   ErrorGuion2Video,
+  Estilo,
   EspacioProyecto,
   escribirJson,
   existe,
@@ -17,6 +18,7 @@ import {
   listarProyectos,
   NOMBRES_CLAVES,
   NombrePaso,
+  Pronunciacion,
   type Config,
 } from "@guion2video/nucleo";
 import { cargarConfigProveedores, probarClaves } from "@guion2video/proveedores";
@@ -65,14 +67,76 @@ type ConSlug = { Params: { slug: string } };
 
 app.get("/api/salud", async () => ({ ok: true, simular: config.simular }));
 
+// ───────── Estilos de canal ─────────
+
+const ID_ESTILO = /^[a-z0-9][a-z0-9-]{1,40}$/;
+const dirEstilo = (id: string) => {
+  if (!ID_ESTILO.test(id)) throw new ErrorGuion2Video(`"${id}" no es un identificador válido: usa minúsculas, números y guiones (p. ej. "mi-canal")`, "validacion");
+  return join(config.estilos, id);
+};
+
+/** Proyectos que usan cada estilo: editar un estilo afecta a todos ellos. */
+async function proyectosPorEstilo(): Promise<Record<string, string[]>> {
+  const r: Record<string, string[]> = {};
+  for (const slug of await listarProyectos(config)) {
+    const p = await leerJsonSiExiste<{ estilo?: string }>(join(config.proyectos, slug, "proyecto.json"));
+    if (p?.estilo) (r[p.estilo] ??= []).push(slug);
+  }
+  return r;
+}
+
 app.get("/api/estilos", async () => {
   const dirs = (await readdir(config.estilos, { withFileTypes: true })).filter((d) => d.isDirectory());
+  const usos = await proyectosPorEstilo();
   return Promise.all(
     dirs.map(async (d) => {
-      const e = await leerJsonSiExiste<{ id: string; nombre: string }>(join(config.estilos, d.name, "estilo.json"));
-      return { id: d.name, nombre: e?.nombre ?? d.name };
+      const e = await leerJsonSiExiste<{ nombre?: string; idioma?: string; colores?: Record<string, string> }>(join(config.estilos, d.name, "estilo.json"));
+      return { id: d.name, nombre: e?.nombre ?? d.name, idioma: e?.idioma, colores: e?.colores, proyectos: usos[d.name] ?? [] };
     }),
   );
+});
+
+app.get<{ Params: { id: string } }>("/api/estilos/:id", async (req) => {
+  const dir = dirEstilo(req.params.id);
+  const estilo = await leerJsonSiExiste<Record<string, unknown>>(join(dir, "estilo.json"));
+  if (!estilo) throw new ErrorGuion2Video(`No existe el estilo "${req.params.id}"`, "no_encontrado");
+  return {
+    id: req.params.id,
+    estilo,
+    pronunciacion: (await leerJsonSiExiste<Record<string, string>>(join(dir, "pronunciacion.json"))) ?? {},
+    proyectos: (await proyectosPorEstilo())[req.params.id] ?? [],
+  };
+});
+
+/** Guarda el estilo completo. Se valida con el mismo esquema que usa el pipeline; los campos que no conoce se conservan. */
+app.put<{ Params: { id: string }; Body: { estilo: Record<string, unknown>; pronunciacion?: Record<string, string> } }>("/api/estilos/:id", async (req) => {
+  const dir = dirEstilo(req.params.id);
+  if (!(await existe(join(dir, "estilo.json")))) throw new ErrorGuion2Video(`No existe el estilo "${req.params.id}"`, "no_encontrado");
+  const estilo = { ...req.body.estilo, id: req.params.id };
+  const v = Estilo.safeParse(estilo);
+  if (!v.success) {
+    throw new ErrorGuion2Video(`El estilo no es válido:\n${v.error.issues.map((i) => `• ${i.path.join(".")}: ${i.message}`).join("\n")}`, "validacion");
+  }
+  await escribirJson(join(dir, "estilo.json"), estilo);
+  if (req.body.pronunciacion) {
+    const limpia = Object.fromEntries(Object.entries(req.body.pronunciacion).map(([k, val]) => [k.trim(), String(val).trim()]).filter(([k, val]) => k && val));
+    await escribirJson(join(dir, "pronunciacion.json"), Pronunciacion.parse(limpia));
+  }
+  return { ok: true };
+});
+
+/** Crea un estilo copiando otro (con su pronunciación y sus recursos). */
+app.post<{ Body: { id: string; nombre: string; base: string } }>("/api/estilos", async (req) => {
+  const { id, nombre, base } = req.body;
+  const destino = dirEstilo(String(id ?? "").trim());
+  const origen = dirEstilo(String(base ?? ""));
+  if (!nombre?.trim()) throw new ErrorGuion2Video("Ponle un nombre al estilo", "validacion");
+  if (await existe(destino)) throw new ErrorGuion2Video(`Ya existe un estilo "${id}"`, "validacion");
+  if (!(await existe(join(origen, "estilo.json")))) throw new ErrorGuion2Video(`No existe el estilo base "${base}"`, "no_encontrado");
+  await cp(origen, destino, { recursive: true });
+  const estilo = await leerJson<Record<string, unknown>>(join(destino, "estilo.json"));
+  await escribirJson(join(destino, "estilo.json"), { ...estilo, id, nombre: nombre.trim() });
+  return { id };
 });
 
 app.get("/api/proyectos", async () => {
@@ -294,19 +358,21 @@ app.put<{ Body: Record<string, string> }>("/api/configuracion/claves", async (re
   return { actualizadas: cambios.map(([k]) => k) };
 });
 
-app.put<{ Body: { estilo: string; voz?: string; voz_id?: string; imagen_principal?: string; imagen_premium?: string; musica?: string; efectos?: string; llm_modelo?: string } }>(
+app.put<{ Body: { estilo?: string; voz?: string; voz_id?: string; imagen_principal?: string; imagen_premium?: string; musica?: string; efectos?: string; llm_modelo?: string } }>(
   "/api/configuracion/proveedores",
   async (req) => {
     const b = req.body;
-    const ruta = join(config.estilos, b.estilo, "estilo.json");
-    const e = await leerJson<Record<string, any>>(ruta);
-    if (b.voz) e.voz.proveedor = b.voz;
-    if (b.voz_id) e.voz.voz_id = b.voz_id;
-    if (b.imagen_principal) e.imagen.proveedor_principal = b.imagen_principal;
-    if (b.imagen_premium) e.imagen.proveedor_premium = b.imagen_premium;
-    if (b.musica) e.musica.proveedor = b.musica;
-    if (b.efectos) e.musica.efectos_proveedor = b.efectos;
-    await escribirJson(ruta, e);
+    if (b.estilo) {
+      const ruta = join(dirEstilo(b.estilo), "estilo.json");
+      const e = await leerJson<Record<string, any>>(ruta);
+      if (b.voz) e.voz.proveedor = b.voz;
+      if (b.voz_id) e.voz.voz_id = b.voz_id;
+      if (b.imagen_principal) e.imagen.proveedor_principal = b.imagen_principal;
+      if (b.imagen_premium) e.imagen.proveedor_premium = b.imagen_premium;
+      if (b.musica) e.musica.proveedor = b.musica;
+      if (b.efectos) e.musica.efectos_proveedor = b.efectos;
+      await escribirJson(ruta, e);
+    }
     if (b.llm_modelo) {
       const rutaCfg = join(config.raiz, "configuracion.json");
       const c = await leerJson<Record<string, any>>(rutaCfg);
@@ -322,9 +388,9 @@ app.put<{ Body: { estilo: string; voz?: string; voz_id?: string; imagen_principa
 const web = join(config.raiz, "paquetes", "web", "dist");
 if (await existe(web)) {
   await app.register(fstatic, { root: web, prefix: "/", decorateReply: false, wildcard: false });
-  app.setNotFoundHandler((req, reply) => {
-    if (req.url.startsWith("/api/")) return reply.status(404).send({ error: "No encontrado" });
-    return reply.type("text/html").send(readFile(join(web, "index.html")));
+  app.setNotFoundHandler(async (req, reply) => {
+    if (req.url.startsWith("/api/") || req.url.startsWith("/assets/")) return reply.status(404).send({ error: "No encontrado" });
+    return reply.type("text/html").send(await readFile(join(web, "index.html")));
   });
 }
 

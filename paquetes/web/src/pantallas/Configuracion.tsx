@@ -12,9 +12,6 @@ interface Config {
 }
 interface Prueba { clave: string; presente: boolean; ok?: boolean; detalle: string }
 
-const VOCES = ["elevenlabs", "cartesia", "local-say"];
-const IMAGENES = ["google-nano-banana-2", "openai-gpt-image-2", "fal-seedream", "fal-flux", "atlas-seedream", "atlas-nano-banana-2"];
-const AUDIO = ["jamendo", "freesound", "biblioteca"];
 
 export function Configuracion() {
   const { datos, recargar } = useDatos<Config>("/configuracion");
@@ -63,9 +60,14 @@ export function Configuracion() {
           <Ajuste etiqueta="Imágenes en paralelo" valor={String(datos.paralelo_imagenes)} clave="GUION2VIDEO_PARALELO_IMAGENES" alGuardar={recargar} />
           <Ajuste etiqueta="Modo simulado (1 = no gasta, 0 = APIs reales). Requiere reiniciar la API." valor={datos.simular ? "1" : "0"} clave="GUION2VIDEO_SIMULAR" alGuardar={recargar} />
         </div>
-        {datos.estilos.map((e) => (
-          <ProveedoresEstilo key={e.id} estilo={e} modelo={datos.llm.modelo} alGuardar={recargar} />
-        ))}
+        <ModeloClaude modelo={datos.llm.modelo} alGuardar={recargar} />
+        <div className="panel rejilla">
+          <h2>Estilos de canal</h2>
+          <p style={{ color: "var(--texto-3)", margin: 0 }}>La voz, los proveedores de imagen, los colores y el resto de la identidad de cada canal se editan en <a href="#/estilos">Estilos</a>.</p>
+          <div className="fila">
+            {datos.estilos.map((e) => <a key={e.id} className="boton chico" href={`#/estilos/${e.id}`}>{e.id}</a>)}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -85,39 +87,21 @@ function Ajuste({ etiqueta, valor, clave, alGuardar }: { etiqueta: string; valor
   );
 }
 
-function ProveedoresEstilo({ estilo, modelo, alGuardar }: { estilo: Config["estilos"][number]; modelo: string; alGuardar: () => Promise<void> }) {
-  const [f, setF] = useState({ ...estilo, llm_modelo: modelo });
+function ModeloClaude({ modelo, alGuardar }: { modelo: string; alGuardar: () => Promise<void> }) {
+  const [v, setV] = useState(modelo);
   const accion = useAccion();
-  const campo = (k: keyof typeof f, etiqueta: string, opciones?: string[]) => (
-    <label>
-      {etiqueta}
-      {opciones ? (
-        <select value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })}>
-          {[...new Set([f[k], ...opciones])].map((o) => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
-      )}
-    </label>
-  );
   return (
     <div className="panel rejilla">
-      <h2>Proveedores · estilo {estilo.id}</h2>
-      <div className="rejilla dos">
-        {campo("voz", "Voz", VOCES)}
-        {campo("voz_id", "ID de la voz clonada")}
-        {campo("imagen_principal", "Imágenes (principal)", IMAGENES)}
-        {campo("imagen_premium", "Imágenes (premium y miniaturas)", IMAGENES)}
-        {campo("musica", "Música", AUDIO)}
-        {campo("efectos", "Efectos", AUDIO)}
-        {campo("llm_modelo", "Modelo de Claude (todos los estilos)")}
-      </div>
-      <div className="fila">
-        {accion.error && <div className="mensaje">{accion.error}</div>}
-        {accion.mensaje && <span style={{ color: "var(--ok)" }}>{accion.mensaje}</span>}
-        <span className="espacio" />
-        <button className="boton primario" disabled={accion.ocupado} onClick={() => accion.ejecutar(async () => { await api.put("/configuracion/proveedores", { ...f, estilo: estilo.id }); await alGuardar(); }, "Guardado")}>Guardar proveedores</button>
-      </div>
+      <h2>Claude</h2>
+      <label>
+        Modelo (todos los estilos): un alias como "opus" o un ID completo como "claude-opus-5-5"
+        <span className="fila" style={{ flexWrap: "nowrap" }}>
+          <input value={v} onChange={(e) => setV(e.target.value)} />
+          <button className="boton chico" disabled={!v.trim() || v === modelo || accion.ocupado} onClick={() => accion.ejecutar(async () => { await api.put("/configuracion/proveedores", { llm_modelo: v.trim() }); await alGuardar(); }, "Guardado")}>Guardar</button>
+        </span>
+      </label>
+      {accion.error && <div className="mensaje">{accion.error}</div>}
+      {accion.mensaje && <span style={{ color: "var(--ok)" }}>{accion.mensaje}</span>}
     </div>
   );
 }
