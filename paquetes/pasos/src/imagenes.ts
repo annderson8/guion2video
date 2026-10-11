@@ -133,6 +133,22 @@ export const pasoImagenes: Paso = {
     const { lista, archivo } = await unidades(ctx);
     return huella("imagenes", VERSION, lista.map((u) => [u.imagen.id, u.huella]), archivo.map((e) => e.imagenes.map((i) => i.id)));
   },
+  async conservar(ctx) {
+    let adoptadas = 0;
+    let faltantes = 0;
+    for (const u of (await unidades(ctx)).lista) {
+      const meta = await leerMetaImagen(ctx, u.imagen.id);
+      if (!meta || !(await existe(u.archivo))) {
+        faltantes++;
+        continue;
+      }
+      if (meta.origen !== "usuario" && meta.huella !== u.huella) {
+        await escribirJson(rutaMetaImagen(ctx, u.imagen.id), { ...meta, huella: u.huella });
+        adoptadas++;
+      }
+    }
+    return { adoptadas, faltantes };
+  },
   async huellaAprobacion(ctx) {
     const inv = await inventarioImagenes(ctx);
     return huella("imagenes-aprobacion", inv.map((x) => x.meta?.archivo_huella ?? "falta"));

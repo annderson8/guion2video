@@ -17,6 +17,7 @@ import {
 import { probarClaves } from "@guion2video/proveedores";
 import {
   aprobar,
+  conservar,
   compararProveedoresImagen,
   crearContexto,
   editarPromptImagen,
@@ -52,6 +53,7 @@ Uso: pnpm guion2video <comando> [proyecto] [opciones]
   estimar <slug> [--hasta <paso>]        costo estimado de lo que falta (lo que está en caché no cuenta)
   ejecutar <slug> --hasta <paso> [--si]  ejecuta hasta ese paso y se detiene en cada revisión
   aprobar <slug> --paso <paso> [--escena id] [--imagen id]
+  conservar <slug> --hasta <paso>        usa lo ya generado con la configuración actual (no regenera ni gasta)
   regenerar <slug> --paso <paso> --escena <id>[,<id>…] | --imagen <id>
   editar-prompt <slug> --imagen <id> --prompt "…" [--calidad premium]
   subir-imagen <slug> --imagen <id> --archivo <ruta> [--fuente "…"]
@@ -209,6 +211,14 @@ async function principal() {
       const ctx = await contexto();
       const hasta = v.hasta ? nombrePaso(v.hasta) : "composicion";
       mostrarResultado(await ejecutarHasta(ctx, hasta, { confirmar }));
+      return;
+    }
+    case "conservar": {
+      const ctx = await contexto();
+      const r = await conservar(ctx, nombrePaso(exigir(v.hasta, "Falta --hasta <paso>")));
+      for (const p of r.conservados) console.log(c.verde(`✓ ${p.titulo}: se conserva lo ya generado${p.unidades > 1 ? ` (${p.unidades} unidades)` : ""}`));
+      if (!r.conservados.length && !r.detenido) console.log(c.gris("Nada obsoleto que conservar."));
+      if (r.detenido) console.log(`${c.amarillo("!")} ${r.detenido.mensaje}`);
       return;
     }
     case "aprobar": {

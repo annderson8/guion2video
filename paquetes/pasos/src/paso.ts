@@ -30,6 +30,11 @@ export interface Paso {
   salidas(ctx: ContextoPaso): string[];
   estimar(ctx: ContextoPaso): Promise<Estimacion>;
   ejecutar(ctx: ContextoPaso): Promise<ResultadoPaso>;
+  /**
+   * Pasos que guardan una huella por unidad (voz, alineación, imágenes): reescribe esas huellas con las
+   * entradas actuales sin regenerar nada. Solo toca unidades cuyo archivo ya existe; el resto cuenta como faltante.
+   */
+  conservar?(ctx: ContextoPaso): Promise<{ adoptadas: number; faltantes: number }>;
   /** Aprobación granular (p. ej. imágenes una a una). */
   aprobar?(ctx: ContextoPaso, op: { unidades?: string[] }): Promise<number>;
   /** Para pasos con aprobación granular: ¿está todo aprobado? */

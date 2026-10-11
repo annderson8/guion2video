@@ -83,13 +83,10 @@ export const pasoPublicacion: Paso = {
   depende: ["render"],
   revision: true,
   async huella(ctx) {
-    const llm = ctx.proveedores.llm();
     return huella(
       "publicacion",
       VERSION,
       VERSION_PROMPTS,
-      llm.id,
-      llm.modelo,
       await huellaArchivo(ctx.espacio.rutas.timeline),
       await huellaArchivo(ctx.espacio.rutas.guionJson),
       await huellaArchivo(ctx.espacio.ruta("ambiente", "creditos.json")),

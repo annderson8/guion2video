@@ -191,8 +191,8 @@ function timelineRevision(ctx: ContextoPaso, datos: DatosEscena[], codigos: Map<
   return { timeline, inicio };
 }
 
+// El modelo de las animaciones no entra en la huella del paso: cambiarlo no invalida lo ya generado.
 const huellaEntradas = async (ctx: ContextoPaso) => {
-  const llm = ctx.proveedores.llmAnimaciones();
   const { estilo } = ctx.estilo;
   const { escenas } = await leerEscenas(ctx);
   const ilustradas = conIlustracion(escenas);
@@ -201,8 +201,6 @@ const huellaEntradas = async (ctx: ContextoPaso) => {
   return huella(
     "superposiciones",
     VERSION,
-    llm.id,
-    llm.modelo,
     estilo.superposiciones,
     estilo.colores,
     estilo.tipografia,

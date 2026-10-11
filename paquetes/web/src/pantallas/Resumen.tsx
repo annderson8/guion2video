@@ -17,6 +17,20 @@ export function Resumen() {
       setMensaje({ tipo: "error", texto: (e as Error).message });
     }
   };
+  const conservarPaso = async (paso: string, titulo: string) => {
+    const ok = window.confirm(
+      `Usar lo ya generado hasta "${titulo}" con la configuración actual.\n\nNo se regenera ni se paga nada: el paso queda al día aunque los archivos se hicieron con la configuración anterior (otro modelo, proveedor o ajuste). Si lo que cambió fue el texto del guion o los prompts, mejor usa "Ejecutar hasta aquí".\n\n¿Continuar?`,
+    );
+    if (!ok) return;
+    try {
+      const r = await api.post<{ conservados: { titulo: string }[]; detenido?: { mensaje: string } }>(`/proyectos/${slug}/conservar`, { hasta: paso });
+      const hechos = r.conservados.map((p) => p.titulo).join(", ");
+      setMensaje({ tipo: r.detenido ? "error" : "ok", texto: [hechos && `Conservado: ${hechos}.`, r.detenido?.mensaje, !hechos && !r.detenido && "No había nada obsoleto que conservar."].filter(Boolean).join(" ") });
+      await recargar();
+    } catch (e) {
+      setMensaje({ tipo: "error", texto: (e as Error).message });
+    }
+  };
   const estimacion = Object.fromEntries(detalle.estimacion.map((e) => [e.nombre, e]));
   return (
     <div className="rejilla">
@@ -54,6 +68,11 @@ export function Resumen() {
                     Aprobar
                   </button>
                 )}
+                {e.estado === "obsoleto" && (
+                  <button className="boton chico" disabled={ocupado} onClick={() => conservarPaso(e.nombre, e.titulo)} title="Marca lo ya generado como válido con la configuración actual, sin regenerar ni gastar">
+                    Conservar lo generado
+                  </button>
+                )}
                 {(puedeEjecutar || e.estado === "error") && (
                   <button className="boton chico" disabled={ocupado} onClick={() => lanzar("/ejecutar", { hasta: e.nombre })}>
                     Ejecutar hasta aquí
@@ -65,7 +84,7 @@ export function Resumen() {
         })}
       </div>
       <p style={{ color: "var(--texto-3)", fontSize: 12.5 }}>
-        Cada paso guarda la huella de sus entradas: si nada cambió no se vuelve a ejecutar ni a pagar. Los pasos marcados como "por revisar" detienen la cadena hasta que los apruebes.
+        Cada paso guarda la huella de sus entradas: si nada cambió no se vuelve a ejecutar ni a pagar. Si cambiaste una configuración y no quieres rehacer lo ya generado, usa "Conservar lo generado". Los pasos marcados como "por revisar" detienen la cadena hasta que los apruebes.
       </p>
     </div>
   );

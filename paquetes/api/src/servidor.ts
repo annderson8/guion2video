@@ -24,6 +24,7 @@ import {
 import { cargarConfigProveedores, crearProveedores, probarClaves } from "@guion2video/proveedores";
 import {
   aprobar,
+  conservar,
   crearContexto,
   editarEscena,
   editarPromptImagen,
@@ -317,6 +318,12 @@ app.post<ConSlug & { Body: { confirmar_presupuesto?: boolean } }>("/api/proyecto
 app.post<ConSlug & { Body: { paso: string; unidades?: string[] } }>("/api/proyectos/:slug/aprobar", async (req) => {
   if (trabajos.ocupado(req.params.slug)) throw Object.assign(new Error("Espera a que termine el trabajo en curso"), { statusCode: 409 });
   return { mensaje: await aprobar(await contexto(req.params.slug), NombrePaso.parse(req.body.paso), { unidades: req.body.unidades, por: "interfaz" }) };
+});
+
+/** "Usar lo ya generado": adopta la configuración actual en los pasos obsoletos sin regenerar ni gastar. */
+app.post<ConSlug & { Body: { hasta: string } }>("/api/proyectos/:slug/conservar", async (req) => {
+  if (trabajos.ocupado(req.params.slug)) throw Object.assign(new Error("Espera a que termine el trabajo en curso"), { statusCode: 409 });
+  return await conservar(await contexto(req.params.slug), NombrePaso.parse(req.body.hasta));
 });
 
 app.get<ConSlug>("/api/proyectos/:slug/trabajo", async (req) => trabajos.actual(req.params.slug) ?? null);

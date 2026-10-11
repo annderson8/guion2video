@@ -197,10 +197,10 @@ export const proporcionGraficos = (escenas: Escena[]) => {
 
 // ───────── Paso ─────────
 
+// El modelo del LLM no entra en la huella del paso: cambiarlo no invalida escenas ya hechas (la caché por llamada sí lo usa).
 const huellaEntradas = async (ctx: ContextoPaso) => {
-  const llm = ctx.proveedores.llm();
   const { estilo } = ctx.estilo;
-  return huella("escenas", VERSION_PROMPTS, await huellaArchivo(ctx.espacio.rutas.guionJson), llm.id, llm.modelo, estilo.ritmo, estilo.voz.velocidad, estilo.imagen.estilo_prompt);
+  return huella("escenas", VERSION_PROMPTS, await huellaArchivo(ctx.espacio.rutas.guionJson), estilo.ritmo, estilo.voz.velocidad, estilo.imagen.estilo_prompt);
 };
 
 export const pasoEscenas: Paso = {

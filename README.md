@@ -118,6 +118,7 @@ La API escucha solo en `127.0.0.1` y nunca envía las claves al navegador.
 | `estimar <slug> [--hasta paso]` | Costo de lo que falta |
 | `ejecutar <slug> --hasta <paso> [--si]` | Ejecuta lo necesario para llegar a ese paso; se detiene en cada revisión |
 | `aprobar <slug> --paso <paso> [--imagen id] [--escena id]` | Aprueba (en imágenes, también una a una) |
+| `conservar <slug> --hasta <paso>` | Si cambiaste una configuración (modelo, proveedor, voz…), marca lo ya generado como válido sin regenerar ni gastar. En la interfaz: «Conservar lo generado» |
 | `regenerar <slug> --paso <paso> --escena <id> \| --imagen <id>` | Regenera solo esas unidades, ignorando la caché |
 | `editar-prompt <slug> --imagen <id> --prompt "…" [--calidad premium]` | Cambia el prompt de una imagen |
 | `subir-imagen <slug> --imagen <id> --archivo foto.jpg [--fuente "…"]` | Reemplaza con una imagen propia (queda aprobada) |

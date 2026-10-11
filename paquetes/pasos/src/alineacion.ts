@@ -94,6 +94,23 @@ export const pasoAlineacion: Paso = {
   revision: false,
   huella: async (ctx) => huella("alineacion", VERSION, (await unidades(ctx)).map((u) => [u.escena, u.huella])),
   salidas: () => [],
+  async conservar(ctx) {
+    let adoptadas = 0;
+    let faltantes = 0;
+    for (const u of await unidades(ctx)) {
+      const ruta = rutaAlineacion(ctx, u.escena);
+      const previa = await leerJsonSiExiste<{ huella?: string }>(ruta);
+      if (!previa) {
+        faltantes++;
+        continue;
+      }
+      if (previa.huella !== u.huella) {
+        await escribirJson(ruta, { ...previa, huella: u.huella });
+        adoptadas++;
+      }
+    }
+    return { adoptadas, faltantes };
+  },
   async estimar(ctx) {
     const us = await unidades(ctx);
     const trans = ctx.proveedores.transcripcion();

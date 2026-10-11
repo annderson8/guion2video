@@ -1,10 +1,14 @@
 {
   "$comentario": "Nombres de modelo y opciones por proveedor. Cámbialos aquí, nunca en el código. Verifica los IDs vigentes en la documentación de cada proveedor.",
-  "llm": { "proveedor": "claude-cli", "modelo": "opus", "esfuerzo": "high" },
+  "llm": { "proveedor": "claude-cli", "modelo": "sonnet", "esfuerzo": "high" },
   "animaciones": { "modelo": "sonnet", "esfuerzo": "medium", "paralelo": 1 },
   "$llm_api": "Para usar la API en vez de la suscripción: \"llm\": { \"proveedor\": \"anthropic\", \"modelo\": \"claude-opus-5-5\", \"esfuerzo\": \"high\" } y ANTHROPIC_API_KEY en .env",
   "voz": {
     "elevenlabs": { "modelo": "eleven_multilingual_v2", "formato": "mp3_44100_128" },
+    "elevenlabs-v4": { "modelo": "eleven_v4", "formato": "mp3_44100_128" },
+    "elevenlabs-v4-turbo": { "modelo": "eleven_v4_turbo", "formato": "mp3_44100_128" },
+    "elevenlabs-v3": { "modelo": "eleven_v3", "formato": "mp3_44100_128" },
+    "elevenlabs-v3-conversational": { "modelo": "eleven_v3_conversational", "formato": "mp3_44100_128" },
     "cartesia": { "modelo": "sonic-3", "version_api": "2026-03-01", "idioma": "es" },
     "local-say": { "voz": "Paulina", "palabras_por_minuto": 170 }
   },
@@ -14,7 +18,15 @@
     "fal-seedream": { "modelo": "fal-ai/bytedance/seedream/v4/text-to-image", "tamano": "landscape_16_9" },
     "fal-flux": { "modelo": "fal-ai/flux/schnell", "tamano": "landscape_16_9" },
     "atlas-seedream": { "modelo": "bytedance/seedream-v4.7/text-to-image", "parametros": { "size": "2560*1440" } },
-    "atlas-nano-banana-2": { "modelo": "google/nano-banana-2/text-to-image", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } }
+    "atlas-nano-banana-2": { "modelo": "google/nano-banana-2/text-to-image", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } },
+    "atlas-nano-banana-2-dev": { "modelo": "google/nano-banana-2/text-to-image-developer", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } },
+    "atlas-nano-banana-2-lite-dev": { "modelo": "google/nano-banana-2-lite/text-to-image-developer", "parametros": { "aspect_ratio": "16:9", "resolution": "1k" } },
+    "atlas-nano-banana-2-1-dev": { "modelo": "google/nano-banana-2.1-developer/text-to-image", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } },
+    "atlas-nano-banana-pro-dev": { "modelo": "google/nano-banana-pro/text-to-image-developer", "parametros": { "aspect_ratio": "16:9", "resolution": "2k" }, "parametros_premium": { "resolution": "4k" } },
+    "atlas-nano-banana-dev": { "modelo": "google/nano-banana/text-to-image-developer", "parametros": { "aspect_ratio": "16:9" } },
+    "atlas-gpt-image-2-dev": { "modelo": "openai/gpt-image-2-developer/text-to-image", "parametros": { "size": "2048x1152", "quality": "medium", "output_format": "png" }, "parametros_premium": { "quality": "high" } },
+    "atlas-gpt-image-2-5-flare-dev": { "modelo": "openai/gpt-image-2.5-flare-developer/text-to-image", "parametros": { "size": "2048x1152", "quality": "medium", "output_format": "png" }, "parametros_premium": { "quality": "high" } },
+    "atlas-gpt-image-2-5-sunburst-dev": { "modelo": "openai/gpt-image-2.5-sunburst-developer/text-to-image", "parametros": { "size": "2048x1152", "quality": "medium", "output_format": "png" }, "parametros_premium": { "quality": "high" } }
   },
   "transcripcion": { "proveedor": "openai-whisper", "modelo": "whisper-1" },
   "imagenes": { "paralelo": 4, "reintentos": 3, "ancho_salida": 2560, "alto_salida": 1440 }

@@ -2,21 +2,25 @@
   "id": "fraudes-latam",
   "nombre": "Fraudes que marcaron a América Latina",
   "idioma": "es",
-  "formato": { "ancho": 1920, "alto": 1080, "fps": 30 },
+  "formato": {
+    "ancho": 1920,
+    "alto": 1080,
+    "fps": 30
+  },
   "voz": {
     "proveedor": "elevenlabs",
     "voz_id": "Gbi7AdGeWcqZDLabwWhj",
-    "velocidad": 0.95,
+    "velocidad": 1,
     "estabilidad": 0.5,
-    "similitud": 0.8,
+    "similitud": 1,
     "normalizar_numeros": false,
     "lufs": -16,
-    "pausa_escena_s": 0.4,
-    "pausa_parte_s": 1.2
+    "pausa_escena_s": 0.3,
+    "pausa_parte_s": 1
   },
   "imagen": {
-    "proveedor_principal": "google-nano-banana-2",
-    "proveedor_premium": "google-nano-banana-2",
+    "proveedor_principal": "atlas-nano-banana-2-1-dev",
+    "proveedor_premium": "atlas-nano-banana-2-dev",
     "estilo_prompt": "ilustración editorial estilo documental, pintura digital, luz cinematográfica, paleta ocre y azul oscuro, textura de grano, sin texto",
     "negativo": "fotografía realista de personas reales, logotipos, marcas de agua, texto ilegible",
     "imagenes_referencia": [],
@@ -28,9 +32,23 @@
     "porcentaje_minimo_graficos": 25,
     "max_imagenes_seguidas": 6
   },
-  "tipografia": { "titulos": "Bebas Neue", "subtitulos": "Inter", "cifras": "JetBrains Mono" },
-  "colores": { "fondo": "#0E1116", "acento": "#E0A526", "texto": "#F4F1EA", "alerta": "#C2412D" },
-  "subtitulos": { "activos": true, "palabras_por_bloque": 6, "resaltar_palabra_actual": true, "posicion": "inferior" },
+  "tipografia": {
+    "titulos": "Bebas Neue",
+    "subtitulos": "Inter",
+    "cifras": "JetBrains Mono"
+  },
+  "colores": {
+    "fondo": "#0E1116",
+    "acento": "#E0A526",
+    "texto": "#F4F1EA",
+    "alerta": "#C2412D"
+  },
+  "subtitulos": {
+    "activos": true,
+    "palabras_por_bloque": 6,
+    "resaltar_palabra_actual": true,
+    "posicion": "inferior"
+  },
   "musica": {
     "proveedor": "jamendo",
     "volumen_db": -6,
@@ -39,10 +57,17 @@
     "efectos_volumen_db": -10
   },
   "intro_outro": {},
-  "marca": { "texto": "FRAUDES LATAM" },
-  "superposiciones": { "activas": true },
+  "marca": {
+    "texto": "FRAUDES LATAM"
+  },
+  "superposiciones": {
+    "activas": true
+  },
   "publicacion": {
     "nota_ia": "Este video usa la voz sintética del creador del canal (clonada con su consentimiento) e ilustraciones generadas con inteligencia artificial. La investigación y el guion son originales y se basan en las fuentes públicas citadas.",
-    "llamadas_accion": ["Suscríbete para ver la próxima historia.", "Cuéntanos en los comentarios si alguien que conoces cayó en una pirámide."]
+    "llamadas_accion": [
+      "Suscríbete para ver la próxima historia.",
+      "Cuéntanos en los comentarios si alguien que conoces cayó en una pirámide."
+    ]
   }
 }

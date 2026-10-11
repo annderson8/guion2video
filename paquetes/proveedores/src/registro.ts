@@ -70,7 +70,7 @@ export async function crearProveedores(
       memo(`voz:${simular ? "simulado" : id}`, () => {
         if (simular || id === "simulado") return crearVozSimulada(costos);
         const c = cfg.voz[id] ?? {};
-        if (id === "elevenlabs") return crearElevenLabs(k.ELEVENLABS_API_KEY, c, costos);
+        if (id === "elevenlabs" || id.startsWith("elevenlabs-")) return crearElevenLabs(id, k.ELEVENLABS_API_KEY, c, costos);
         if (id === "cartesia") return crearCartesia(k.CARTESIA_API_KEY, c, costos);
         if (id === "local-say") return crearVozLocal(c);
         return desconocido("voz", id);

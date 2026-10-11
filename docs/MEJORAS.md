@@ -14,6 +14,7 @@ Cambios hechos al construir el sistema, con su motivo. Todo lo demás sigue la e
 5. **Caché por contenido.** Voz, imágenes y respuestas de Claude se guardan en `cache/<tipo>/<huella>`. Si las escenas se renumeran (p. ej. por insertar una), lo que ya existía no se vuelve a pagar. Si una parte falla al dividir en escenas, al reintentar solo se paga esa parte.
 6. **Las aprobaciones van atadas al contenido.** Aprobar guarda la huella de lo aprobado. Si se regenera una imagen o la voz de una escena, solo eso vuelve a pedir revisión. Editar escenas o prompts en la interfaz cuenta como revisión y no obliga a reaprobar todo.
 7. **La estimación tiene en cuenta la caché.** `estimar` solo cuenta lo que de verdad hay que generar.
+7 bis. **Conservar lo ya generado.** Cambiar un modelo o un proveedor deja el paso «obsoleto» (la huella cambia), pero lo ya hecho sigue siendo válido. «Conservar lo generado» (`conservar <slug> --hasta <paso>`) reescribe las huellas con la configuración actual sin llamar a ninguna API; solo adopta pasos completos (si falta algún archivo se detiene). El modelo del LLM ya no entra en la huella de Escenas, Animaciones ni Publicación.
 8. **Protección de ediciones manuales.** Si `escenas.json` se editó a mano y luego cambia el guion, el paso se niega a sobrescribirlo sin `--forzar`.
 
 ## Voz, subtítulos y audio

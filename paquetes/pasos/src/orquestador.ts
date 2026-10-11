@@ -248,6 +248,55 @@ async function marcarAprobado(ctx: ContextoPaso, paso: Paso, por?: string) {
   await refrescar(ctx);
 }
 
+export interface ResultadoConservar {
+  /** Pasos que quedaron al día con la configuración actual, sin regenerar nada. */
+  conservados: { nombre: NombrePaso; titulo: string; unidades: number }[];
+  /** Por qué se detuvo antes de llegar al paso pedido (si se detuvo). */
+  detenido?: { paso: NombrePaso; mensaje: string };
+}
+
+/**
+ * "Usar lo que ya está hecho": en vez de regenerar, reescribe las huellas de los pasos obsoletos (y de sus
+ * unidades) con las entradas actuales. No llama a ninguna API ni gasta nada. Solo adopta pasos que ya se
+ * ejecutaron y cuyos archivos existen todos; si falta alguno se detiene y deja el paso obsoleto para que
+ * "ejecutar" genere solo lo que falta.
+ */
+export async function conservar(ctx: ContextoPaso, hasta: NombrePaso): Promise<ResultadoConservar> {
+  const resultado: ResultadoConservar = { conservados: [] };
+  for (const paso of cierre(hasta)) {
+    await refrescar(ctx);
+    const e = await calcularEstado(ctx, paso);
+    if (e.estado !== "obsoleto") continue;
+    const guardado = ctx.proyecto.pasos[paso.nombre];
+    const detener = (mensaje: string) => {
+      resultado.detenido = { paso: paso.nombre, mensaje: `${paso.titulo}: ${mensaje}` };
+      return resultado;
+    };
+    if (!guardado?.huella) return detener("todavía no se ha ejecutado, no hay nada que conservar");
+    let adoptadas = 0;
+    try {
+      if (paso.conservar) {
+        const r = await paso.conservar(ctx);
+        adoptadas = r.adoptadas;
+        if (r.faltantes) return detener(`faltan ${r.faltantes} archivo(s); usa "Ejecutar" para generar solo lo que falta`);
+      }
+      if (!(await Promise.all(paso.salidas(ctx).map(existe))).every(Boolean)) return detener("faltan archivos de su resultado; usa \"Ejecutar\"");
+      const nueva = await paso.huella(ctx);
+      if (nueva !== guardado.huella) {
+        await ctx.espacio.actualizarPaso(paso.nombre, { huella: nueva });
+        adoptadas ||= 1;
+      }
+    } catch (err) {
+      return detener((err as Error).message.split("\n")[0]);
+    }
+    if (!adoptadas) continue; // obsoleto solo por una dependencia: nada propio que adoptar
+    resultado.conservados.push({ nombre: paso.nombre, titulo: paso.titulo, unidades: adoptadas });
+    ctx.log.info(`✓ ${paso.titulo}: se conserva lo ya generado`);
+  }
+  await refrescar(ctx);
+  return resultado;
+}
+
 /** Regenera unidades concretas (escenas o imágenes) de un paso ignorando la caché. */
 export async function regenerar(ctx: ContextoPaso, nombre: NombrePaso, unidades: string[], op: OpcionesEjecucion = {}) {
   const paso = obtenerPaso(nombre);

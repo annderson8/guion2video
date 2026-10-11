@@ -8,7 +8,11 @@
     "simulado": { "entrada_por_millon": 0, "salida_por_millon": 0 }
   },
   "voz": {
-    "elevenlabs": { "por_mil_caracteres": 0.15 },
+    "elevenlabs": { "por_mil_caracteres": 0.08 },
+    "elevenlabs-v4": { "por_mil_caracteres": 0.022 },
+    "elevenlabs-v4-turbo": { "por_mil_caracteres": 0.011 },
+    "elevenlabs-v3": { "por_mil_caracteres": 0.08 },
+    "elevenlabs-v3-conversational": { "por_mil_caracteres": 0.04 },
     "cartesia": { "por_mil_caracteres": 0.05 },
     "local-say": { "por_mil_caracteres": 0 },
     "simulado": { "por_mil_caracteres": 0 }
@@ -20,6 +24,14 @@
     "fal-flux": { "estandar": 0.003 },
     "atlas-seedream": { "estandar": 0.03 },
     "atlas-nano-banana-2": { "estandar": 0.12, "premium": 0.16 },
+    "atlas-nano-banana-2-dev": { "estandar": 0.042, "premium": 0.063 },
+    "atlas-nano-banana-2-lite-dev": { "estandar": 0.014 },
+    "atlas-nano-banana-2-1-dev": { "estandar": 0.027, "premium": 0.041 },
+    "atlas-nano-banana-pro-dev": { "estandar": 0.049, "premium": 0.088 },
+    "atlas-nano-banana-dev": { "estandar": 0.013 },
+    "atlas-gpt-image-2-dev": { "estandar": 0.004, "premium": 0.004 },
+    "atlas-gpt-image-2-5-flare-dev": { "estandar": 0.03, "premium": 0.03 },
+    "atlas-gpt-image-2-5-sunburst-dev": { "estandar": 0.03, "premium": 0.03 },
     "simulado": { "estandar": 0, "premium": 0 }
   },
   "transcripcion": {

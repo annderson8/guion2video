@@ -87,6 +87,22 @@ export const pasoVoz: Paso = {
     return huella("voz-aprobacion", metas.map((m) => m?.archivo_huella ?? "falta"));
   },
   salidas: () => [],
+  async conservar(ctx) {
+    let adoptadas = 0;
+    let faltantes = 0;
+    for (const u of await unidades(ctx)) {
+      const meta = await leerJsonSiExiste<MetaVoz>(u.meta);
+      if (!meta || !(await existe(u.archivo))) {
+        faltantes++;
+        continue;
+      }
+      if (meta.huella !== u.huella) {
+        await escribirJson(u.meta, { ...meta, huella: u.huella });
+        adoptadas++;
+      }
+    }
+    return { adoptadas, faltantes };
+  },
   async estimar(ctx) {
     const us = await unidades(ctx);
     const prov = ctx.proveedores.voz(ctx.estilo.estilo.voz.proveedor);
