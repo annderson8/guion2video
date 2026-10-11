@@ -15,9 +15,10 @@ RUN pnpm install --frozen-lockfile \
  && pnpm --filter @guion2video/web build \
  && pnpm --filter @guion2video/render exec remotion browser ensure
 
-# En el servidor no existe la sesión de Claude Code: se usa la API (ANTHROPIC_API_KEY en .env).
-RUN node -e 'const f="configuracion.json",c=JSON.parse(require("fs").readFileSync(f,"utf8"));c.llm={proveedor:"anthropic",modelo:"claude-opus-5-5",esfuerzo:"high"};require("fs").writeFileSync(f,JSON.stringify(c,null,2)+"\n")'
+# Claude Code: el proyecto lo invoca como `claude` (proveedor claude-cli). La sesión se guarda
+# en el volumen /data/claude (CLAUDE_CONFIG_DIR) para sobrevivir a reconstrucciones.
+RUN npm install -g @anthropic-ai/claude-code
 
-ENV GUION2VIDEO_HOST=0.0.0.0 GUION2VIDEO_PUERTO_API=4310 NODE_ENV=production
+ENV CLAUDE_CONFIG_DIR=/data/claude GUION2VIDEO_HOST=0.0.0.0 GUION2VIDEO_PUERTO_API=4310 NODE_ENV=production
 EXPOSE 4310
 CMD ["pnpm", "api"]

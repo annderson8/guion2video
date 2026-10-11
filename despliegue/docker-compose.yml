@@ -9,6 +9,7 @@ services:
     volumes:
       - ./datos/proyectos:/app/proyectos
       - ./datos/estilos:/app/estilos
+      - ./datos/claude:/data/claude   # sesión de Claude Code (login una sola vez)
       - ./datos/.env:/app/.env   # la interfaz escribe aquí las claves (escritura en sitio)
     # Tope duro para no ahogar la producción de Linkea que comparte el VPS (2 vCPU, 8 GB).
     cpus: 1.0
