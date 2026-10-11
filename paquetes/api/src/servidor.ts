@@ -409,5 +409,7 @@ if (await existe(web)) {
 }
 
 const puerto = config.puertoApi;
-await app.listen({ port: puerto, host: "127.0.0.1" });
-console.log(`guion2video API en http://127.0.0.1:${puerto}${config.simular ? " (modo simulado)" : ""}`);
+// En Docker hay que escuchar en 0.0.0.0 (el puerto solo se publica en 127.0.0.1 del host).
+const host = process.env.GUION2VIDEO_HOST ?? "127.0.0.1";
+await app.listen({ port: puerto, host });
+console.log(`guion2video API en http://${host}:${puerto}${config.simular ? " (modo simulado)" : ""}`);

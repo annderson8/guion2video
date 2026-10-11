@@ -1,0 +1,9 @@
+.git
+.github
+**/node_modules
+proyectos
+.env
+.guion2video-tmp
+paquetes/web/dist
+datos
+despliegue/datos

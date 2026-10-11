@@ -1,0 +1,21 @@
+# Se ejecuta desde la raíz del repo: docker compose -f despliegue/docker-compose.yml up -d --build
+services:
+  guion2video:
+    build: ..
+    container_name: guion2video
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4310:4310"   # solo local; nginx publica con HTTPS y contraseña
+    volumes:
+      - ./datos/proyectos:/app/proyectos
+      - ./datos/estilos:/app/estilos
+      - ./datos/.env:/app/.env   # la interfaz escribe aquí las claves (escritura en sitio)
+    # Tope duro para no ahogar la producción de Linkea que comparte el VPS (2 vCPU, 8 GB).
+    cpus: 1.0
+    mem_limit: 3g
+    memswap_limit: 3g
+    shm_size: 1g                 # Chromium usa /dev/shm
+    cpu_shares: 256              # baja prioridad frente a los demás contenedores
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
