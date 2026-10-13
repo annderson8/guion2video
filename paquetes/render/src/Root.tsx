@@ -1,9 +1,11 @@
 import { Composition, Still } from "remotion";
 import { Video } from "./Video.tsx";
 import { Miniatura } from "./componentes/Miniatura.tsx";
+import { LlamadoSuscripcion } from "./componentes/LlamadoSuscripcion.tsx";
 import { TIMELINE_DEMO } from "./demo.ts";
 import { ESTILO_POR_DEFECTO } from "./contexto.tsx";
 import type { PropsMiniatura, PropsVideo } from "./tipos.ts";
+import type { PropsLlamado } from "./componentes/LlamadoSuscripcion.tsx";
 
 const metadatos = ({ props }: { props: PropsVideo }) => ({
   durationInFrames: Math.max(1, props.timeline.duracion_frames),
@@ -11,6 +13,8 @@ const metadatos = ({ props }: { props: PropsVideo }) => ({
   width: props.timeline.ancho,
   height: props.timeline.alto,
 });
+
+const LlamadoEstudio = (props: Record<string, unknown>) => <LlamadoSuscripcion {...(props as unknown as PropsLlamado)} />;
 
 export function Root() {
   return (
@@ -30,6 +34,16 @@ export function Root() {
         component={Video}
         defaultProps={{ timeline: TIMELINE_DEMO } satisfies PropsVideo}
         durationInFrames={TIMELINE_DEMO.duracion_frames}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      {/* Vista suelta del llamado a suscribirse, para ajustarlo en el Studio (pnpm studio). */}
+      <Composition
+        id="Llamado"
+        component={LlamadoEstudio}
+        defaultProps={{ canal: "@RendimientoGarantizado", titulo: "Título del video", clics: { suscribir: 70, like: 125 }, duracion: 210 } satisfies PropsLlamado}
+        durationInFrames={210}
         fps={30}
         width={1920}
         height={1080}

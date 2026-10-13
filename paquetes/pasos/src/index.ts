@@ -16,3 +16,4 @@ export { regionesConVoz, expresionDucking } from "./mezcla.ts";
 export { editarEscena, editarPromptImagen } from "./edicion.ts";
 export { compararProveedoresImagen } from "./comparar.ts";
 export { estructurarTexto, fragmentar, ensamblarEstructura, validarEstructura } from "./estructurar.ts";
+export { generarLlamado, estadoLlamado, estimarLlamado, leerMetaLlamado, clicsLlamado, rutaVozLlamado, type MetaLlamado } from "./llamado.ts";

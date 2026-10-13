@@ -1,0 +1,216 @@
+{
+  "huella": "3ebc139f920f0c3e7de8e05e",
+  "archivo": "voz.wav",
+  "texto": "Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta.",
+  "texto_hablado": "Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta.",
+  "tokens": [
+    {
+      "escrito": "Si",
+      "desde": 0,
+      "hasta": 1
+    },
+    {
+      "escrito": "te",
+      "desde": 1,
+      "hasta": 2
+    },
+    {
+      "escrito": "está",
+      "desde": 2,
+      "hasta": 3
+    },
+    {
+      "escrito": "gustando",
+      "desde": 3,
+      "hasta": 4
+    },
+    {
+      "escrito": "este",
+      "desde": 4,
+      "hasta": 5
+    },
+    {
+      "escrito": "contenido,",
+      "desde": 5,
+      "hasta": 6
+    },
+    {
+      "escrito": "suscríbete",
+      "desde": 6,
+      "hasta": 7
+    },
+    {
+      "escrito": "y",
+      "desde": 7,
+      "hasta": 8
+    },
+    {
+      "escrito": "dale",
+      "desde": 8,
+      "hasta": 9
+    },
+    {
+      "escrito": "me",
+      "desde": 9,
+      "hasta": 10
+    },
+    {
+      "escrito": "gusta.",
+      "desde": 10,
+      "hasta": 11
+    },
+    {
+      "escrito": "Así",
+      "desde": 11,
+      "hasta": 12
+    },
+    {
+      "escrito": "nos",
+      "desde": 12,
+      "hasta": 13
+    },
+    {
+      "escrito": "ayudas",
+      "desde": 13,
+      "hasta": 14
+    },
+    {
+      "escrito": "a",
+      "desde": 14,
+      "hasta": 15
+    },
+    {
+      "escrito": "crear",
+      "desde": 15,
+      "hasta": 16
+    },
+    {
+      "escrito": "más",
+      "desde": 16,
+      "hasta": 17
+    },
+    {
+      "escrito": "historias",
+      "desde": 17,
+      "hasta": 18
+    },
+    {
+      "escrito": "como",
+      "desde": 18,
+      "hasta": 19
+    },
+    {
+      "escrito": "esta.",
+      "desde": 19,
+      "hasta": 20
+    }
+  ],
+  "palabras": [
+    {
+      "palabra": "Si",
+      "inicio_ms": 0,
+      "fin_ms": 160
+    },
+    {
+      "palabra": "te",
+      "inicio_ms": 200,
+      "fin_ms": 240
+    },
+    {
+      "palabra": "está",
+      "inicio_ms": 320,
+      "fin_ms": 440
+    },
+    {
+      "palabra": "gustando",
+      "inicio_ms": 480,
+      "fin_ms": 800
+    },
+    {
+      "palabra": "este",
+      "inicio_ms": 920,
+      "fin_ms": 1040
+    },
+    {
+      "palabra": "contenido,",
+      "inicio_ms": 1320,
+      "fin_ms": 1760
+    },
+    {
+      "palabra": "suscríbete",
+      "inicio_ms": 1880,
+      "fin_ms": 2480
+    },
+    {
+      "palabra": "y",
+      "inicio_ms": 2560,
+      "fin_ms": 2640
+    },
+    {
+      "palabra": "dale",
+      "inicio_ms": 2760,
+      "fin_ms": 2880
+    },
+    {
+      "palabra": "me",
+      "inicio_ms": 2960,
+      "fin_ms": 3040
+    },
+    {
+      "palabra": "gusta.",
+      "inicio_ms": 3080,
+      "fin_ms": 3760
+    },
+    {
+      "palabra": "Así",
+      "inicio_ms": 3880,
+      "fin_ms": 4040
+    },
+    {
+      "palabra": "nos",
+      "inicio_ms": 4080,
+      "fin_ms": 4160
+    },
+    {
+      "palabra": "ayudas",
+      "inicio_ms": 4240,
+      "fin_ms": 4560
+    },
+    {
+      "palabra": "a",
+      "inicio_ms": 4600,
+      "fin_ms": 4640
+    },
+    {
+      "palabra": "crear",
+      "inicio_ms": 4800,
+      "fin_ms": 4960
+    },
+    {
+      "palabra": "más",
+      "inicio_ms": 5040,
+      "fin_ms": 5200
+    },
+    {
+      "palabra": "historias",
+      "inicio_ms": 5360,
+      "fin_ms": 5680
+    },
+    {
+      "palabra": "como",
+      "inicio_ms": 5800,
+      "fin_ms": 5920
+    },
+    {
+      "palabra": "esta.",
+      "inicio_ms": 6080,
+      "fin_ms": 6480
+    }
+  ],
+  "duracion_ms": 6400,
+  "proveedor": "elevenlabs-v4",
+  "modelo": "eleven_v4",
+  "fuente": "proveedor",
+  "costo_usd": 0.0024,
+  "fecha": "2026-10-13T19:26:59.379Z"
+}

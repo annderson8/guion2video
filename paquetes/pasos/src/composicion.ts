@@ -23,12 +23,18 @@ import { construirBloques } from "./subtitulos.ts";
 import { compilarAnimacion, leerSuperposiciones } from "./superposiciones.ts";
 import { DURACION_SEPARADOR_MS, estiloVisual, pausaTrasMs } from "./tiempos.ts";
 import { mezclar, type EntradaMezcla } from "./mezcla.ts";
+import { clicsLlamado, llamadoVigente, rutaVozLlamado, estadoLlamado } from "./llamado.ts";
+import { leerGuion } from "./guion.ts";
 
-const VERSION = 2;
+const VERSION = 3;
+/** Silencio antes de que empiece a hablar el llamado y después de que termina, para que respire. */
+const LLAMADO_ANTES_MS = 600;
+const LLAMADO_DESPUES_MS = 900;
 const MAX_EFECTO_MS = 8000;
 export const LUFS_FINAL = -14;
 
-async function recurso(ctx: ContextoPaso, ruta: string | undefined, nombre: string) {
+/** Copia un recurso del estilo al proyecto. `medir: false` para imágenes (el logo no tiene duración). */
+async function recurso(ctx: ContextoPaso, ruta: string | undefined, nombre: string, medir = true) {
   if (!ruta) return undefined;
   const origen = ctx.estilo.resolver(ruta);
   if (!(await existe(origen))) {
@@ -38,7 +44,7 @@ async function recurso(ctx: ContextoPaso, ruta: string | undefined, nombre: stri
   const destino = `recursos/${nombre}${extname(origen)}`;
   await asegurarCarpeta(ctx.espacio.ruta("recursos"));
   await copyFile(origen, ctx.espacio.ruta(destino));
-  return { src: destino, duracion_ms: await duracionMs(origen) };
+  return { src: destino, duracion_ms: medir ? await duracionMs(origen) : 0 };
 }
 
 async function entradas(ctx: ContextoPaso) {
@@ -51,7 +57,8 @@ async function entradas(ctx: ContextoPaso) {
   const musica = await leerJsonSiExiste<ArchivoMusica>(ctx.espacio.ruta("ambiente", "musica.json"));
   const efectos = await leerJsonSiExiste<ArchivoEfectos>(ctx.espacio.ruta("ambiente", "efectos.json"));
   const superposiciones = await leerSuperposiciones(ctx);
-  return { archivo, voces, alineaciones, imagenes, musica, efectos, superposiciones };
+  const llamado = await llamadoVigente(ctx.estilo, ctx.proveedores);
+  return { archivo, voces, alineaciones, imagenes, musica, efectos, superposiciones, llamado };
 }
 
 export const pasoComposicion: Paso = {
@@ -82,6 +89,8 @@ export const pasoComposicion: Paso = {
       e.marca,
       e.musica,
       e.intro_outro,
+      e.llamado,
+      x.llamado?.huella ?? null,
     );
   },
   salidas: (ctx) => [ctx.espacio.rutas.timeline, ctx.espacio.ruta("audio", "mezcla.wav")],
@@ -106,6 +115,7 @@ export const pasoComposicion: Paso = {
     const extras: EntradaMezcla[] = [];
     let cursor = 0;
 
+    const logo = await recurso(ctx, estilo.marca.logo, "logo", false);
     const intro = await recurso(ctx, estilo.intro_outro.intro, "intro");
     if (intro) {
       video.push({ id: "intro", escena: "intro", desde: 0, duracion: aFrame(intro.duracion_ms), tipo: "video", src: intro.src, transicion: "corte" });
@@ -114,8 +124,51 @@ export const pasoComposicion: Paso = {
       cursor = intro.duracion_ms;
     }
 
+    let cambiosDeParte = 0;
+    let llamadoInsertado = false;
     for (let i = 0; i < escenas.length; i++) {
       const e = escenas[i];
+      if (i > 0 && e.parte !== escenas[i - 1].parte) {
+        cambiosDeParte++;
+        // Llamado a suscribirse: al terminar la parte N, antes del separador de la siguiente.
+        if (x.llamado && !llamadoInsertado && cambiosDeParte === estilo.llamado.despues_de_parte) {
+          llamadoInsertado = true;
+          const lm = x.llamado;
+          const vozLlamado = await recurso(ctx, rutaVozLlamado(ctx.estilo), "llamado");
+          const inicio = cursor;
+          const fin = inicio + LLAMADO_ANTES_MS + lm.duracion_ms + LLAMADO_DESPUES_MS;
+          const guion = await leerGuion(ctx).catch(() => undefined);
+          video.push({
+            id: "llamado",
+            escena: "llamado",
+            desde: aFrame(inicio),
+            duracion: aFrame(fin) - aFrame(inicio),
+            tipo: "llamado",
+            transicion: "fundido",
+            props: {
+              canal: estilo.llamado.canal ?? estilo.marca.texto ?? estilo.nombre,
+              titulo: ctx.proyecto.titulo ?? guion?.titulo,
+              logo: logo?.src,
+              suscriptores: estilo.llamado.suscriptores,
+              clics: clicsLlamado(lm.palabras, fps, LLAMADO_ANTES_MS),
+            },
+          });
+          if (vozLlamado) {
+            voz.push({ desde: aFrame(inicio + LLAMADO_ANTES_MS), duracion: aFrame(lm.duracion_ms), src: vozLlamado.src, etiqueta: "llamado" });
+            voces.push({ src: ctx.espacio.ruta(vozLlamado.src), desde_ms: inicio + LLAMADO_ANTES_MS, duracion_ms: lm.duracion_ms });
+          }
+          subtitulos.push(
+            ...construirBloques(
+              lm.palabras.map((p) => ({ texto: p.palabra, inicio_ms: inicio + LLAMADO_ANTES_MS + p.inicio_ms, fin_ms: inicio + LLAMADO_ANTES_MS + p.fin_ms })),
+              { fps, palabrasPorBloque: estilo.subtitulos.palabras_por_bloque },
+            ),
+          );
+          // Cuenta como parte del capítulo anterior: la música de esa parte sigue sonando.
+          const previa = tramosPartes.get(escenas[i - 1].parte);
+          if (previa) previa.hasta = fin;
+          cursor = fin;
+        }
+      }
       const narrada = !!e.texto_narracion.trim();
       const vozMeta = x.voces[e.id];
       const alineacion = x.alineaciones[e.id];
@@ -183,6 +236,12 @@ export const pasoComposicion: Paso = {
       }
     }
 
+    if (estilo.llamado.activo && !llamadoInsertado) {
+      const est = await estadoLlamado(ctx.estilo, ctx.proveedores);
+      if (est.estado !== "al_dia") avisos.push(`El llamado a suscribirse no está listo (${est.estado === "obsoleto" ? "cambió el texto o la voz" : "falta generarlo"}): pnpm guion2video llamado generar --estilo ${ctx.estilo.estilo.id}`);
+      else avisos.push(`El llamado a suscribirse se omitió: el guion necesita al menos ${estilo.llamado.despues_de_parte + 1} partes`);
+    }
+
     const outro = await recurso(ctx, estilo.intro_outro.outro, "outro");
     if (outro) {
       video.push({ id: "outro", escena: "outro", desde: aFrame(cursor), duracion: aFrame(outro.duracion_ms), tipo: "video", src: outro.src, transicion: "fundido" });
@@ -221,7 +280,7 @@ export const pasoComposicion: Paso = {
       ancho: estilo.formato.ancho,
       alto: estilo.formato.alto,
       duracion_frames: aFrame(cursor),
-      estilo: { ...estiloVisual(estilo), marca: { texto: estilo.marca.texto, logo: (await recurso(ctx, estilo.marca.logo, "logo"))?.src } },
+      estilo: { ...estiloVisual(estilo), marca: { texto: estilo.marca.texto, logo: logo?.src } },
       pistas: { video, voz, musica, efectos, superposiciones, mezcla: { desde: 0, src: "audio/mezcla.wav", huella: (await huellaArchivo(rutaMezcla)).slice(0, 12) }, subtitulos },
       partes,
     };
@@ -229,7 +288,7 @@ export const pasoComposicion: Paso = {
     const minutos = cursor / 60000;
     return {
       costo_usd: 0,
-      resumen: `timeline de ${minutos.toFixed(1)} min: ${video.length} elementos visuales, ${superposiciones.length} animaciones, ${subtitulos.length} bloques de subtítulos`,
+      resumen: `timeline de ${minutos.toFixed(1)} min${llamadoInsertado ? " (con llamado a suscribirse)" : ""}: ${video.length} elementos visuales, ${superposiciones.length} animaciones, ${subtitulos.length} bloques de subtítulos`,
       avisos,
     };
   },

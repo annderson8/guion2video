@@ -35,6 +35,12 @@ Cambios hechos al construir el sistema, con su motivo. Todo lo demás sigue la e
 19. **Lista de publicación** (`salida/LISTA-PUBLICACION.md`) con los puntos de cumplimiento de la sección 14.
 20. **Respaldo ante rechazos de Claude.** Los guiones tratan sobre delitos financieros, y un clasificador podría rechazar alguna petición. Se usa el *fallback* del servidor (`fallbacks: "default"`), que reintenta en el modelo recomendado en vez de fallar.
 
+## Llamado a suscribirse
+
+24. **Segmento fijo tras la primera parte.** Al terminar la parte indicada (`llamado.despues_de_parte`, por defecto la primera) se inserta un segmento de unos 7 s: una pantalla que simula un video de YouTube donde un cursor hace clic en *Suscribirse* y en *Me gusta*. Los clics caen en mitad de las palabras «suscríbete» y «gusta» de la voz (se leen de la alineación). No usa logos ni marca de YouTube y no inventa cifras (los suscriptores son opcionales).
+25. **La voz se genera una vez por estilo, no por proyecto.** Vive en `estilos/<id>/llamado/` (`voz.wav` + `llamado.json` con los tiempos por palabra) y todos los proyectos del estilo la reutilizan: `pnpm guion2video llamado generar --estilo <id>`. Si cambia el texto o la voz queda «obsoleto» y la composición avisa en vez de usar un audio que no corresponde.
+26. **Cuenta como parte del capítulo anterior.** No crea un capítulo de YouTube nuevo, y la música de esa parte sigue sonando durante el segmento. Los proyectos existentes solo rehacen composición, render y publicación ($0).
+
 ## Infraestructura
 
 21. **Sin SQLite.** La especificación ya exige `proyecto.json`, `costos.json` y los `.meta.json`. Una base de datos duplicaría ese estado y podría desincronizarse. Cada proyecto es una carpeta autocontenida, copiable y versionable. La cola de trabajos es en memoria, con concurrencia y reintentos con espera exponencial, porque cada ejecución termina en un solo proceso. Si se pasa a un VPS con varios trabajadores, ahí sí conviene BullMQ o SQLite.

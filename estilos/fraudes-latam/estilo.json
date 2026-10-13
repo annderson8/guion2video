@@ -58,7 +58,15 @@
   },
   "intro_outro": {},
   "marca": {
-    "texto": "FRAUDES LATAM"
+    "texto": "FRAUDES LATAM",
+    "logo": "estilos/fraudes-latam/logo.png"
+  },
+  "llamado": {
+    "activo": true,
+    "texto": "Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta.",
+    "canal": "@RendimientoGarantizado",
+    "voz_proveedor": "elevenlabs-v4",
+    "despues_de_parte": 1
   },
   "superposiciones": {
     "activas": true

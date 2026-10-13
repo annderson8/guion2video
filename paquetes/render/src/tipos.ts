@@ -13,6 +13,7 @@ export type TipoItemVideo =
   | "documento"
   | "cita"
   | "titulo_parte"
+  | "llamado"
   | "video";
 
 export type MovimientoImagen =

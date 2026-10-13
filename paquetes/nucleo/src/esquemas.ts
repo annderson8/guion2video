@@ -69,6 +69,27 @@ export const Estilo = z.object({
     .object({ intro: z.string().optional(), outro: z.string().optional() })
     .default({}),
   marca: z.object({ logo: z.string().optional(), texto: z.string().optional() }).default({}),
+  /**
+   * Llamado a suscribirse: un segmento fijo (voz + animación que simula la pantalla de YouTube) que se inserta
+   * al terminar la parte `despues_de_parte`. La voz se genera una sola vez por estilo (`llamado generar`).
+   */
+  llamado: z
+    .object({
+      activo: z.boolean().default(true),
+      texto: z.string().default("Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta."),
+      /** Usuario del canal tal como se ve en YouTube, p. ej. "@RendimientoGarantizado". */
+      canal: z.string().optional(),
+      /** Texto opcional bajo el nombre del canal, p. ej. "12,4 mil suscriptores". */
+      suscriptores: z.string().optional(),
+      /** Proveedor de voz solo para el llamado (por ejemplo "elevenlabs-v4"); sin él usa el de la narración. La voz (voz_id) es la misma. */
+      voz_proveedor: z.string().optional(),
+      despues_de_parte: z.number().int().min(1).default(1),
+    })
+    .default({
+      activo: true,
+      texto: "Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta.",
+      despues_de_parte: 1,
+    }),
   /** Animaciones que diseña Claude encima de las ilustraciones, con la tipografía y los colores del estilo (no generan imágenes ni audio). */
   superposiciones: z
     .object({

@@ -6,6 +6,8 @@ import { parseArgs } from "node:util";
 import {
   cargarConfig,
   cargarEnv,
+  cargarEstilo,
+  crearBitacora,
   EspacioProyecto,
   ErrorGuion2Video,
   listarProyectos,
@@ -14,7 +16,7 @@ import {
   usd,
   type Config,
 } from "@guion2video/nucleo";
-import { probarClaves } from "@guion2video/proveedores";
+import { crearProveedores, probarClaves } from "@guion2video/proveedores";
 import {
   aprobar,
   conservar,
@@ -22,8 +24,11 @@ import {
   crearContexto,
   editarPromptImagen,
   ejecutarHasta,
+  estadoLlamado,
   estadoProyecto,
+  estimarLlamado,
   estimarProyecto,
+  generarLlamado,
   leerGuion,
   regenerar,
   renderizarPreview,
@@ -64,6 +69,7 @@ Uso: pnpm guion2video <comando> [proyecto] [opciones]
   fuentes <slug>                         muestra las fuentes del guion
   costos <slug>                          gasto real por paso y proveedor
   comparar-imagenes <slug> [--n 10] [--proveedores a,b,c]   Fase 0: mismas escenas con varios modelos
+  llamado [estado|generar] --estilo <id> [--forzar]   voz del «suscríbete y dale me gusta» (una vez por estilo)
   probar-claves                          verifica las claves de API sin gastar
   demo [--salida demo.mp4]               renderiza la demo de componentes (30 s)
 
@@ -307,6 +313,29 @@ async function principal() {
       const r = await compararProveedoresImagen(ctx, { n, proveedores });
       for (const [p, t] of Object.entries(r.total)) console.log(`  ${p.padEnd(24)} ${usd(t)}`);
       console.log(c.verde(`✓ Abre ${r.archivo}`));
+      return;
+    }
+    case "llamado": {
+      const estilo = await cargarEstilo(config, exigir(v.estilo, "Falta --estilo <id>"));
+      const log = crearBitacora({ verbose: v.verbose });
+      const proveedores = await crearProveedores(config, { avisar: log.aviso });
+      const accion = slugPos ?? "estado";
+      const actual = await estadoLlamado(estilo, proveedores);
+      if (accion === "estado") {
+        const textos = { desactivado: c.gris("desactivado en el estilo"), sin_generar: c.amarillo("sin generar"), obsoleto: c.amarillo("obsoleto (cambió el texto o la voz)"), al_dia: c.verde("al día") };
+        console.log(`Llamado a suscribirse de «${estilo.estilo.nombre}»: ${textos[actual.estado]}`);
+        console.log(c.gris(`  Texto: ${estilo.estilo.llamado.texto}`));
+        if (actual.meta) console.log(c.gris(`  Voz: ${(actual.meta.duracion_ms / 1000).toFixed(1)} s con ${actual.meta.proveedor}`));
+        if (actual.estado === "sin_generar" || actual.estado === "obsoleto") console.log(c.gris(`  Genéralo con: pnpm guion2video llamado generar --estilo ${estilo.estilo.id}`));
+        return;
+      }
+      if (accion !== "generar") throw new ErrorGuion2Video(`Acción desconocida "${accion}": usa estado o generar`, "validacion");
+      if (!estilo.estilo.llamado.activo) throw new ErrorGuion2Video("El llamado está desactivado en este estilo (llamado.activo)", "validacion");
+      if (actual.estado === "al_dia" && !v.forzar) return console.log(c.verde("Ya está al día (costo $0). Usa --forzar para regenerarlo."));
+      const costo = estimarLlamado(estilo, proveedores);
+      if (!(await confirmar(`Generar la voz del llamado cuesta ≈${usd(costo)}. ¿Continuar?`))) return;
+      const r = await generarLlamado({ estilo, proveedores, log, forzar: v.forzar });
+      console.log(c.verde(`✓ Llamado listo (${(r.meta.duracion_ms / 1000).toFixed(1)} s, ${usd(r.meta.costo_usd)}). Aplica a cada proyecto al volver a ejecutar la composición.`));
       return;
     }
     case "probar-claves": {

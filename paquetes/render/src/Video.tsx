@@ -10,6 +10,7 @@ import {
   EscenaImagen,
   FRAMES_TRANSICION,
   LineaTiempo,
+  LlamadoSuscripcion,
   MapaRegion,
   MarcaCanal,
   Subtitulos,
@@ -41,6 +42,8 @@ function ItemVisual({ item, duracion, base }: { item: ItemVideo; duracion: numbe
       return <Cita texto={p.texto} autor={p.autor} />;
     case "titulo_parte":
       return <TituloParte numero={p.numero} titulo={p.titulo} />;
+    case "llamado":
+      return <LlamadoSuscripcion canal={p.canal} titulo={p.titulo} logo={p.logo} suscriptores={p.suscriptores} clics={p.clics} duracion={duracion} />;
     default:
       return null;
   }
