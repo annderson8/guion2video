@@ -8,6 +8,9 @@ import { Imagenes } from "./Imagenes.tsx";
 import { VistaPrevia } from "./VistaPrevia.tsx";
 import { Publicacion } from "./Publicacion.tsx";
 import { Costos } from "./Costos.tsx";
+import { Recortes } from "./Recortes.tsx";
+import { LimpiarCache } from "./LimpiarCache.tsx";
+import { BorrarVideo } from "./BorrarVideo.tsx";
 
 interface ContextoProyecto {
   slug: string;
@@ -30,6 +33,7 @@ const PESTANAS = [
   ["imagenes", "Imágenes"],
   ["vista-previa", "Vista previa"],
   ["publicacion", "Render y publicación"],
+  ["recortes", "Shorts y Reels"],
   ["costos", "Costos"],
 ] as const;
 
@@ -113,6 +117,8 @@ export function Proyecto({ slug, pestana }: { slug: string; pestana: string }) {
         </div>
         <span className="espacio" />
         <button className="boton chico" onClick={() => void recargar()}>Actualizar</button>
+        <LimpiarCache slug={slug} deshabilitado={ocupado} />
+        <BorrarVideo slug={slug} deshabilitado={ocupado} alBorrar={() => void recargar()} />
       </div>
 
       {errorLanzar && <div className="mensaje" style={{ marginBottom: 14 }}>{errorLanzar}</div>}
@@ -125,7 +131,7 @@ export function Proyecto({ slug, pestana }: { slug: string; pestana: string }) {
           </a>
         ))}
       </nav>
-      {pestana === "escenas" ? <Escenas /> : pestana === "voz" ? <Voz /> : pestana === "imagenes" ? <Imagenes /> : pestana === "vista-previa" ? <VistaPrevia /> : pestana === "publicacion" ? <Publicacion /> : pestana === "costos" ? <Costos /> : <Resumen />}
+      {pestana === "escenas" ? <Escenas /> : pestana === "voz" ? <Voz /> : pestana === "imagenes" ? <Imagenes /> : pestana === "vista-previa" ? <VistaPrevia /> : pestana === "publicacion" ? <Publicacion /> : pestana === "recortes" ? <Recortes /> : pestana === "costos" ? <Costos /> : <Resumen />}
     </Ctx.Provider>
   );
 }

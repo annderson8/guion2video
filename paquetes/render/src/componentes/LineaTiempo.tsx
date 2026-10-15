@@ -1,5 +1,5 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { useEstilo } from "../contexto.tsx";
+import { useDimensiones, useEstilo } from "../contexto.tsx";
 import { familia } from "../fuentes.ts";
 import { FondoGrafico, progreso } from "./comun.tsx";
 
@@ -14,7 +14,8 @@ export function LineaTiempo({
   duracion: number;
 }) {
   const frame = useCurrentFrame();
-  const { fps, width } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const { width } = useDimensiones();
   const { colores, tipografia } = useEstilo();
   const margen = 180;
   const largo = width - margen * 2;

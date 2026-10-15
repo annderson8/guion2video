@@ -1,10 +1,12 @@
 import { Composition, Still } from "remotion";
 import { Video } from "./Video.tsx";
+import { Vertical } from "./Vertical.tsx";
+import { ALTO_VERTICAL, ANCHO_VERTICAL, framesContenido, segmentosRecorte } from "./recorte.ts";
 import { Miniatura } from "./componentes/Miniatura.tsx";
 import { LlamadoSuscripcion } from "./componentes/LlamadoSuscripcion.tsx";
 import { TIMELINE_DEMO } from "./demo.ts";
 import { ESTILO_POR_DEFECTO } from "./contexto.tsx";
-import type { PropsMiniatura, PropsVideo } from "./tipos.ts";
+import type { PropsMiniatura, PropsVertical, PropsVideo } from "./tipos.ts";
 import type { PropsLlamado } from "./componentes/LlamadoSuscripcion.tsx";
 
 const metadatos = ({ props }: { props: PropsVideo }) => ({
@@ -15,6 +17,15 @@ const metadatos = ({ props }: { props: PropsVideo }) => ({
 });
 
 const LlamadoEstudio = (props: Record<string, unknown>) => <LlamadoSuscripcion {...(props as unknown as PropsLlamado)} />;
+
+const metadatosVertical = ({ props }: { props: PropsVertical }) => ({
+  durationInFrames: Math.max(1, framesContenido(segmentosRecorte(props.timeline, props.recorte.desde, props.recorte.hasta)) + props.recorte.cierre.frames),
+  fps: props.timeline.fps,
+  width: ANCHO_VERTICAL,
+  height: ALTO_VERTICAL,
+});
+
+const RECORTE_DEMO: PropsVertical["recorte"] = { tipo: "short", desde: 0, hasta: 150, cierre: { texto: "Mira el video completo en el canal", subtexto: "@RendimientoGarantizado", frames: 90 } };
 
 export function Root() {
   return (
@@ -28,6 +39,16 @@ export function Root() {
         fps={30}
         width={1920}
         height={1080}
+      />
+      <Composition
+        id="Vertical"
+        component={Vertical}
+        defaultProps={{ timeline: TIMELINE_DEMO, recorte: RECORTE_DEMO } satisfies PropsVertical}
+        calculateMetadata={metadatosVertical}
+        durationInFrames={240}
+        fps={30}
+        width={ANCHO_VERTICAL}
+        height={ALTO_VERTICAL}
       />
       <Composition
         id="Demo"

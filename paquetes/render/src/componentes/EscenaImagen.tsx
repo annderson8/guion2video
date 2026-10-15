@@ -28,11 +28,14 @@ export function EscenaImagen({
   huella,
   movimiento = "zoom_lento_entrada",
   duracion,
+  enfoque = 0.5,
 }: {
   src: string;
   huella?: string;
   movimiento?: MovimientoImagen;
   duracion: number;
+  /** Punto horizontal (0 a 1) que se mantiene a la vista cuando el cuadro es más angosto que la imagen. */
+  enfoque?: number;
 }) {
   const frame = useCurrentFrame();
   const resolver = useResolver();
@@ -49,8 +52,9 @@ export function EscenaImagen({
           width: "100%",
           height: "100%",
           objectFit: "cover",
+          objectPosition: `${enfoque * 100}% 50%`,
           transform: transformacion(movimiento, t),
-          transformOrigin: "50% 50%",
+          transformOrigin: `${enfoque * 100}% 50%`,
           willChange: "transform",
         }}
       />

@@ -120,3 +120,19 @@ export type PropsMiniatura = {
   estilo: EstiloVisual;
   variante?: 0 | 1 | 2;
 };
+
+/** Un recorte vertical (Short o Reel): tramo del video final en frames, más la tarjeta de cierre. */
+export interface RecorteVertical {
+  tipo: "short" | "reel";
+  desde: number;
+  hasta: number;
+  /** Punto horizontal (0 a 1) de las ilustraciones que se mantiene a la vista al recortar a 9:16. */
+  enfoque?: number;
+  cierre: { texto: string; subtexto?: string; frames: number };
+}
+
+export type PropsVertical = {
+  timeline: Timeline;
+  recorte: RecorteVertical;
+  base?: string;
+};

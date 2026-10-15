@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { geoBounds, geoMercator, geoPath } from "d3-geo";
 import type { Feature, FeatureCollection, MultiPolygon } from "geojson";
-import { useEstilo } from "../contexto.tsx";
+import { useDimensiones, useEstilo } from "../contexto.tsx";
 import { familia } from "../fuentes.ts";
 import { FondoGrafico, progreso } from "./comun.tsx";
 import colombia from "../mapas/colombia.json";
@@ -25,7 +25,8 @@ const clave = (s: string) => ALIAS[normalizar(s)] ?? normalizar(s);
  */
 export function MapaRegion({ pais, resaltar = [], etiqueta }: { pais: string; resaltar?: string[]; etiqueta?: string }) {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const { width, height } = useDimensiones();
   const { colores, tipografia } = useEstilo();
 
   const { regiones, objetivo, encuadre } = useMemo(() => {

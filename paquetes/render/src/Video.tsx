@@ -20,7 +20,7 @@ import {
 } from "./componentes/index.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function ItemVisual({ item, duracion, base }: { item: ItemVideo; duracion: number; base?: string }) {
+export function ItemVisual({ item, duracion, base }: { item: ItemVideo; duracion: number; base?: string }) {
   const p = (item.props ?? {}) as any;
   switch (item.tipo) {
     case "imagen_ia":

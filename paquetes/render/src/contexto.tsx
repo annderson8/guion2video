@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { staticFile } from "remotion";
+import { staticFile, useVideoConfig } from "remotion";
 import type { EstiloVisual } from "./tipos.ts";
 
 export interface ContextoRender {
@@ -39,3 +39,15 @@ const formatoCO = (decimales: number) =>
 
 /** Formato colombiano: puntos de miles y coma decimal. */
 export const formatearNumero = (n: number, decimales = 0) => formatoCO(decimales).format(n);
+
+/**
+ * Tamaño del lienzo en el que se dibuja un gráfico. Normalmente es el de la composición, pero en los recortes
+ * verticales los gráficos 16:9 se dibujan en 1920×1080 y se reducen, así que lo declaran aquí.
+ */
+export const Dimensiones = createContext<{ ancho: number; alto: number } | null>(null);
+
+export function useDimensiones(): { width: number; height: number } {
+  const forzadas = useContext(Dimensiones);
+  const { width, height } = useVideoConfig();
+  return forzadas ? { width: forzadas.ancho, height: forzadas.alto } : { width, height };
+}

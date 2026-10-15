@@ -23,20 +23,28 @@ import {
 } from "@guion2video/nucleo";
 import { cargarConfigProveedores, crearProveedores, probarClaves } from "@guion2video/proveedores";
 import {
+  agregarRecorte,
   aprobar,
+  borrarVideoFinal,
   conservar,
   crearContexto,
   editarEscena,
   editarPromptImagen,
   ejecutarHasta,
   estadoProyecto,
+  estadoRecortes,
   estimarProyecto,
   estructurarTexto,
   inventarioImagenes,
   leerEscenas,
   leerMetaVoz,
+  limpiarCache,
+  quitarRecorte,
   regenerar,
   renderizarPreview,
+  renderizarRecortes,
+  resumenCache,
+  resumenVideoFinal,
   subirImagenPropia,
   validarProyecto,
   type ContextoPaso,
@@ -260,6 +268,65 @@ app.get<ConSlug>("/api/proyectos/:slug/timeline", async (req, reply) => {
   if (!(await existe(ctx.espacio.rutas.timeline))) return reply.status(404).send({ error: "Aún no hay timeline: ejecuta la composición" });
   return leerJson(ctx.espacio.rutas.timeline);
 });
+
+// ───────── Caché del proyecto ─────────
+
+app.get<ConSlug>("/api/proyectos/:slug/cache", async (req) => resumenCache(await contexto(req.params.slug)));
+
+app.post<ConSlug>("/api/proyectos/:slug/cache/limpiar", async (req) => {
+  if (trabajos.ocupado(req.params.slug)) throw Object.assign(new Error("Espera a que termine el trabajo en curso"), { statusCode: 409 });
+  return limpiarCache(await contexto(req.params.slug));
+});
+
+app.get<ConSlug>("/api/proyectos/:slug/video-final", async (req) => resumenVideoFinal(await contexto(req.params.slug)));
+
+app.post<ConSlug>("/api/proyectos/:slug/video-final/borrar", async (req) => {
+  if (trabajos.ocupado(req.params.slug)) throw Object.assign(new Error("Espera a que termine el trabajo en curso"), { statusCode: 409 });
+  return borrarVideoFinal(await contexto(req.params.slug));
+});
+
+// ───────── Recortes (Shorts y Reels) ─────────
+
+app.get<ConSlug>("/api/proyectos/:slug/recortes", async (req) => {
+  const ctx = await contexto(req.params.slug);
+  const { recortes, llamado } = ctx.estilo.estilo;
+  const cierre = (tipo: "short" | "reel") => ({
+    texto: tipo === "short" ? recortes.texto_short : recortes.texto_reel,
+    subtexto: tipo === "short" ? (recortes.subtexto_short ?? llamado.canal) : recortes.subtexto_reel,
+  });
+  const base = { cierre_s: recortes.cierre_s, cierre: { short: cierre("short"), reel: cierre("reel") }, recortes: await estadoRecortes(ctx) };
+  if (!(await existe(ctx.espacio.rutas.timeline))) return { ...base, video: null };
+  const timeline = await leerJson<{ fps: number; duracion_frames: number; pistas: { video: { tipo: string; desde: number; duracion: number }[]; subtitulos: { desde: number; hasta: number; texto: string }[] } }>(ctx.espacio.rutas.timeline);
+  const seg = (f: number) => Math.round((f / timeline.fps) * 100) / 100;
+  const llamadoItem = timeline.pistas.video.find((v) => v.tipo === "llamado");
+  return {
+    ...base,
+    video: {
+      duracion_s: seg(timeline.duracion_frames),
+      llamado: llamadoItem ? { desde_s: seg(llamadoItem.desde), hasta_s: seg(llamadoItem.desde + llamadoItem.duracion) } : null,
+      bloques: timeline.pistas.subtitulos.map((b) => ({ desde_s: seg(b.desde), hasta_s: seg(b.hasta), texto: b.texto })),
+    },
+  };
+});
+
+app.post<ConSlug & { Body: { tipo: "short" | "reel"; desde_s: number; hasta_s: number; id?: string; titulo?: string; enfoque?: number; texto_cierre?: string; sin_ajuste?: boolean } }>("/api/proyectos/:slug/recortes", async (req) => {
+  if (trabajos.ocupado(req.params.slug)) throw Object.assign(new Error("Espera a que termine el trabajo en curso"), { statusCode: 409 });
+  const b = req.body;
+  return agregarRecorte(await contexto(req.params.slug), { tipo: b.tipo, desde_s: Number(b.desde_s), hasta_s: Number(b.hasta_s), id: b.id || undefined, titulo: b.titulo || undefined, enfoque: b.enfoque, texto_cierre: b.texto_cierre || undefined, sinAjuste: b.sin_ajuste });
+});
+
+app.delete<ConSlug & { Params: { id: string } }>("/api/proyectos/:slug/recortes/:id", async (req) => {
+  await quitarRecorte(await contexto(req.params.slug), req.params.id);
+  return { ok: true };
+});
+
+app.post<ConSlug & { Body: { ids?: string[]; forzar?: boolean } }>("/api/proyectos/:slug/recortes/renderizar", async (req) =>
+  trabajos.iniciar(req.params.slug, "renderizar recortes", async (ctx: ContextoPaso) => {
+    const r = await renderizarRecortes(ctx, { ids: req.body?.ids, forzar: req.body?.forzar });
+    for (const e of r.errores) ctx.log.error(e);
+    return r;
+  }),
+);
 
 app.get<ConSlug>("/api/proyectos/:slug/costos", async (req) => (await contexto(req.params.slug)).costos.resumen());
 

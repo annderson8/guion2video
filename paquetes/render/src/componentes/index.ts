@@ -12,3 +12,4 @@ export { Transicion, FRAMES_TRANSICION } from "./Transicion.tsx";
 export { MarcaCanal } from "./MarcaCanal.tsx";
 export { Miniatura } from "./Miniatura.tsx";
 export { LlamadoSuscripcion, type PropsLlamado } from "./LlamadoSuscripcion.tsx";
+export { CierreRecorte } from "./CierreRecorte.tsx";

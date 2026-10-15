@@ -8,7 +8,7 @@ export { leerAlineacion, alinearSecuencias, aPalabrasEscritas } from "./alineaci
 export { inventarioImagenes, leerMetaImagen, subirImagenPropia, estaAprobada, componerPrompt, type MetaImagen } from "./imagenes.ts";
 export { leerTimeline } from "./composicion.ts";
 export { leerSuperposiciones, compilarAnimacion, ArchivoSuperposiciones, type AnimacionEscena } from "./superposiciones.ts";
-export { renderizarPreview } from "./render.ts";
+export { renderizarPreview, resumenVideoFinal, borrarVideoFinal, type ResumenVideoFinal } from "./render.ts";
 export { validarProyecto, promptsRiesgosos } from "./validaciones.ts";
 export { capitulos, textoDescripcion } from "./publicacion.ts";
 export { construirBloques, bloquesASrt, partirLineas } from "./subtitulos.ts";
@@ -17,3 +17,5 @@ export { editarEscena, editarPromptImagen } from "./edicion.ts";
 export { compararProveedoresImagen } from "./comparar.ts";
 export { estructurarTexto, fragmentar, ensamblarEstructura, validarEstructura } from "./estructurar.ts";
 export { generarLlamado, estadoLlamado, estimarLlamado, leerMetaLlamado, clicsLlamado, rutaVozLlamado, type MetaLlamado } from "./llamado.ts";
+export { leerRecortes, agregarRecorte, quitarRecorte, estadoRecortes, renderizarRecortes, ajustarAPalabras, palabrasDelVideo, duracionRecorteS, validarRecorte, rutaVideoRecorte, type InfoRecorte, type EstadoRecorte } from "./recortes.ts";
+export { resumenCache, limpiarCache, type ResumenCache } from "./cache.ts";

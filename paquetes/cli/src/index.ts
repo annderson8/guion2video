@@ -18,7 +18,9 @@ import {
 } from "@guion2video/nucleo";
 import { crearProveedores, probarClaves } from "@guion2video/proveedores";
 import {
+  agregarRecorte,
   aprobar,
+  borrarVideoFinal,
   conservar,
   compararProveedoresImagen,
   crearContexto,
@@ -28,10 +30,16 @@ import {
   estadoProyecto,
   estimarLlamado,
   estimarProyecto,
+  estadoRecortes,
   generarLlamado,
   leerGuion,
+  limpiarCache,
+  quitarRecorte,
   regenerar,
   renderizarPreview,
+  renderizarRecortes,
+  resumenCache,
+  resumenVideoFinal,
   subirImagenPropia,
   validarProyecto,
   type ContextoPaso,
@@ -59,7 +67,7 @@ Uso: pnpm guion2video <comando> [proyecto] [opciones]
   ejecutar <slug> --hasta <paso> [--si]  ejecuta hasta ese paso y se detiene en cada revisión
   aprobar <slug> --paso <paso> [--escena id] [--imagen id]
   conservar <slug> --hasta <paso>        usa lo ya generado con la configuración actual (no regenera ni gasta)
-  regenerar <slug> --paso <paso> --escena <id>[,<id>…] | --imagen <id>
+  regenerar <slug> --paso <paso> --escena <id>[,<id>…] | --imagen <id>   (composicion y render se rehacen sin unidades)
   editar-prompt <slug> --imagen <id> --prompt "…" [--calidad premium]
   subir-imagen <slug> --imagen <id> --archivo <ruta> [--fuente "…"]
   validar <slug>                         revisiones automáticas antes del render
@@ -67,8 +75,13 @@ Uso: pnpm guion2video <comando> [proyecto] [opciones]
   render <slug> [--forzar]               render final 1080p (+ SRT y miniatura)
   publicar <slug>                        descripción, capítulos, títulos y miniaturas
   fuentes <slug>                         muestra las fuentes del guion
+  limpiar-cache <slug> [--si]            borra la caché del proyecto (libera espacio; regenerar lo ya hecho volvería a costar)
+  borrar-video <slug> [--si]             borra video.mp4 y preview.mp4 para liberar espacio (se rehacen con render, $0)
   costos <slug>                          gasto real por paso y proveedor
   comparar-imagenes <slug> [--n 10] [--proveedores a,b,c]   Fase 0: mismas escenas con varios modelos
+  recortes <slug> [listar|agregar|quitar|renderizar]   Shorts y Reels 9:16 sacados del video
+      agregar --tipo short|reel --desde <seg> --hasta <seg> [--id x] [--titulo "…"] [--enfoque 0-1] [--exacto]
+      quitar --id x · renderizar [--id x[,y]] [--forzar]
   llamado [estado|generar] --estilo <id> [--forzar]   voz del «suscríbete y dale me gusta» (una vez por estilo)
   probar-claves                          verifica las claves de API sin gastar
   demo [--salida demo.mp4]               renderiza la demo de componentes (30 s)
@@ -136,6 +149,11 @@ async function principal() {
     allowPositionals: true,
     options: {
       estilo: { type: "string" },
+      tipo: { type: "string" },
+      id: { type: "string", multiple: true },
+      desde: { type: "string" },
+      enfoque: { type: "string" },
+      exacto: { type: "boolean", default: false },
       guion: { type: "string" },
       slug: { type: "string" },
       titulo: { type: "string" },
@@ -236,8 +254,10 @@ async function principal() {
     case "regenerar": {
       const ctx = await contexto();
       const unidades = [...lista(v.escena), ...lista(v.imagen)];
-      if (!unidades.length) throw new ErrorGuion2Video("Indica qué regenerar: --escena escena-014 o --imagen escena-014-a", "validacion");
-      const r = await regenerar(ctx, nombrePaso(v.paso), unidades, { confirmar });
+      const paso = nombrePaso(v.paso);
+      // Los pasos locales y gratuitos (composición, render, publicación) se rehacen enteros, sin indicar unidades.
+      if (!unidades.length && !["composicion", "render"].includes(paso)) throw new ErrorGuion2Video("Indica qué regenerar: --escena escena-014 o --imagen escena-014-a", "validacion");
+      const r = await regenerar(ctx, paso, unidades, { confirmar });
       console.log(c.verde(`✓ ${r.resumen}`));
       return;
     }
@@ -293,6 +313,28 @@ async function principal() {
       if (!g.fuentes.length) console.log(c.rojo("El guion no tiene fuentes"));
       return;
     }
+    case "limpiar-cache": {
+      const ctx = await contexto();
+      const r = await resumenCache(ctx);
+      const mb = (n: number) => `${(n / 1048576).toFixed(1)} MB`;
+      if (!r.archivos) return console.log(c.gris("La caché de este proyecto ya está vacía."));
+      console.log(`Caché de ${ctx.proyecto.slug}: ${r.archivos} archivos, ${mb(r.bytes)} (se liberarían ${mb(r.liberable_bytes)}; el resto sigue en uso en audio/ e imagenes/).`);
+      if (!(await confirmar("Se pierde la posibilidad de reutilizar voz, imágenes y respuestas de Claude sin volver a pagarlas. ¿Borrar la caché?"))) return;
+      await limpiarCache(ctx);
+      console.log(c.verde(`✓ Caché borrada (${mb(r.liberable_bytes)} liberados)`));
+      return;
+    }
+    case "borrar-video": {
+      const ctx = await contexto();
+      const r = await resumenVideoFinal(ctx);
+      const mb = (n: number) => `${(n / 1048576).toFixed(1)} MB`;
+      if (!r.archivos.length) return console.log(c.gris("Este proyecto no tiene videos renderizados que borrar."));
+      for (const a of r.archivos) console.log(`  ${a.nombre.padEnd(12)} ${mb(a.bytes).padStart(10)}  ${c.gris(a.descripcion)}`);
+      if (!(await confirmar(`Se borran ${mb(r.bytes)}. Si aún no subiste el video, tendrás que renderizarlo de nuevo (tarda). ¿Borrar?`))) return;
+      await borrarVideoFinal(ctx);
+      console.log(c.verde(`✓ Videos borrados (${mb(r.bytes)} liberados). Para rehacerlo: pnpm guion2video render ${ctx.proyecto.slug}`));
+      return;
+    }
     case "costos": {
       const ctx = await contexto();
       const r = await ctx.costos.resumen();
@@ -313,6 +355,58 @@ async function principal() {
       const r = await compararProveedoresImagen(ctx, { n, proveedores });
       for (const [p, t] of Object.entries(r.total)) console.log(`  ${p.padEnd(24)} ${usd(t)}`);
       console.log(c.verde(`✓ Abre ${r.archivo}`));
+      return;
+    }
+    case "recortes": {
+      const ctx = await contexto();
+      const accion = positionals[2] ?? "listar";
+      const segundos = (x: string | undefined, nombre: string) => {
+        const n = Number(String(exigir(x, `Falta --${nombre}`)).replace(",", "."));
+        if (!Number.isFinite(n)) throw new ErrorGuion2Video(`--${nombre} debe ser un número de segundos`, "validacion");
+        return n;
+      };
+      if (accion === "agregar") {
+        const tipo = v.tipo === "short" || v.tipo === "reel" ? v.tipo : undefined;
+        const r = await agregarRecorte(ctx, {
+          tipo: exigir(tipo, "Indica --tipo short o --tipo reel"),
+          desde_s: segundos(v.desde, "desde"),
+          hasta_s: segundos(v.hasta, "hasta"),
+          id: lista(v.id)[0],
+          titulo: v.titulo,
+          enfoque: v.enfoque ? Number(v.enfoque) : undefined,
+          sinAjuste: v.exacto,
+        });
+        console.log(c.verde(`✓ ${r.recorte.id}: ${r.recorte.desde_s} → ${r.recorte.hasta_s} s (${r.duracion_s.toFixed(1)} s de contenido + cierre)`));
+        if (r.ajustado) console.log(c.gris(`  Ajustado a límite de palabra (usa --exacto para no ajustar)`));
+        for (const a of r.avisos) console.log(`${c.amarillo("!")} ${a}`);
+        console.log(c.gris(`  Siguiente: pnpm guion2video recortes ${ctx.proyecto.slug} renderizar`));
+        return;
+      }
+      if (accion === "quitar") {
+        const id = exigir(lista(v.id)[0], "Falta --id");
+        await quitarRecorte(ctx, id);
+        console.log(c.verde(`✓ Recorte ${id} quitado (su video en salida/recortes no se borra)`));
+        return;
+      }
+      if (accion === "renderizar") {
+        const r = await renderizarRecortes(ctx, { ids: lista(v.id), forzar: v.forzar });
+        for (const h of r.hechos) console.log(c.verde(`✓ ${h.id}: ${h.duracion_s.toFixed(0)} s, renderizado en ${h.segundos_render.toFixed(0)} s`));
+        if (r.omitidos.length) console.log(c.gris(`  Al día (no se renderizan de nuevo): ${r.omitidos.join(", ")}`));
+        for (const e of r.errores) console.log(`${c.rojo("✗")} ${e}`);
+        if (!r.hechos.length && !r.omitidos.length && !r.errores.length) console.log(c.gris("No hay recortes. Crea uno con: recortes <slug> agregar --tipo short --desde 10 --hasta 50"));
+        if (r.errores.length) process.exitCode = 1;
+        return;
+      }
+      if (accion !== "listar") throw new ErrorGuion2Video(`Acción desconocida "${accion}": usa listar, agregar, quitar o renderizar`, "validacion");
+      const info = await estadoRecortes(ctx);
+      if (!info.length) console.log(c.gris("Este proyecto no tiene recortes."));
+      for (const i of info) {
+        const estado = { al_dia: c.verde("● al día"), obsoleto: c.amarillo("○ obsoleto"), pendiente: c.gris("○ sin renderizar") }[i.estado];
+        console.log(`  ${i.recorte.id.padEnd(10)} ${i.recorte.tipo.padEnd(5)} ${`${i.recorte.desde_s}–${i.recorte.hasta_s} s`.padEnd(16)} ${i.duracion_s ? `${i.duracion_s.toFixed(0)} s`.padEnd(6) : "".padEnd(6)} ${estado}  ${c.gris(i.recorte.titulo ?? "")}`);
+        if (i.desfasado) console.log(`    ${c.amarillo("!")} el video cambió desde que lo definiste: revisa que los segundos sigan apuntando a lo que quieres`);
+        for (const e of i.errores) console.log(`    ${c.rojo("✗")} ${e}`);
+        for (const a of i.avisos) console.log(`    ${c.amarillo("!")} ${a}`);
+      }
       return;
     }
     case "llamado": {

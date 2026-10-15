@@ -1,5 +1,5 @@
-import { rename } from "node:fs/promises";
-import { ErrorGuion2Video, escribirArchivo, huella, huellaArchivo } from "@guion2video/nucleo";
+import { rename, rm, stat } from "node:fs/promises";
+import { ErrorGuion2Video, escribirArchivo, existe, huella, huellaArchivo } from "@guion2video/nucleo";
 import { huellaFuentes, renderizarMiniatura, renderizarVideo } from "@guion2video/render/renderizar";
 import type { ContextoPaso } from "./contexto.ts";
 import type { Paso } from "./paso.ts";
@@ -69,3 +69,33 @@ export const pasoRender: Paso = {
     };
   },
 };
+
+export interface ResumenVideoFinal {
+  archivos: { nombre: string; descripcion: string; bytes: number }[];
+  bytes: number;
+}
+
+const VIDEOS_FINALES = [
+  { nombre: "video.mp4", descripcion: "video final (1080p)" },
+  { nombre: "preview.mp4", descripcion: "vista previa (540p)" },
+];
+
+/** Los videos renderizados del proyecto y lo que pesan. No incluye subtítulos, miniaturas, descripción ni los Shorts y Reels. */
+export async function resumenVideoFinal(ctx: ContextoPaso): Promise<ResumenVideoFinal> {
+  const archivos: ResumenVideoFinal["archivos"] = [];
+  for (const v of VIDEOS_FINALES) {
+    const ruta = ctx.espacio.ruta("salida", v.nombre);
+    if (await existe(ruta)) archivos.push({ ...v, bytes: (await stat(ruta)).size });
+  }
+  return { archivos, bytes: archivos.reduce((s, a) => s + a.bytes, 0) };
+}
+
+/**
+ * Borra video.mp4 y preview.mp4 para liberar espacio. Todo lo demás se conserva, así que el video se rehace
+ * cuando haga falta con `render` (local, $0): el paso queda «obsoleto» porque falta su resultado.
+ */
+export async function borrarVideoFinal(ctx: ContextoPaso): Promise<ResumenVideoFinal> {
+  const antes = await resumenVideoFinal(ctx);
+  for (const a of antes.archivos) await rm(ctx.espacio.ruta("salida", a.nombre), { force: true });
+  return antes;
+}

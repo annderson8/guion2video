@@ -1,6 +1,8 @@
 export * from "./tipos.ts";
 export { Video } from "./Video.tsx";
+export { Vertical } from "./Vertical.tsx";
 export { TIMELINE_DEMO } from "./demo.ts";
 export { ESTILO_POR_DEFECTO, resolverSrc } from "./contexto.tsx";
 export { FRAMES_TRANSICION } from "./componentes/Transicion.tsx";
 export { NOMBRES_FUENTES } from "./fuentes.ts";
+export * from "./recorte.ts";

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { bundle } from "@remotion/bundler";
 import { openBrowser, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
-import type { PropsMiniatura, PropsVideo, Timeline } from "./tipos.ts";
+import type { PropsMiniatura, PropsVertical, PropsVideo, RecorteVertical, Timeline } from "./tipos.ts";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ_PAQUETE = resolve(AQUI, "..");
@@ -130,6 +130,42 @@ export async function renderizarVideo(op: OpcionesRender): Promise<void> {
       jpegQuality: preview ? 70 : 92,
       audioCodec: "aac",
       audioBitrate: preview ? "128k" : "320k",
+      pixelFormat: "yuv420p",
+      concurrency: op.concurrencia ?? null,
+      timeoutInMilliseconds: 120_000,
+      onProgress: ({ progress, stitchStage }) => op.alProgreso?.(progress, stitchStage === "muxing" ? "uniendo" : "renderizando"),
+    });
+  } finally {
+    await servidor.cerrar();
+  }
+}
+
+export interface OpcionesRenderVertical {
+  timeline: Timeline;
+  recorte: RecorteVertical;
+  dirProyecto: string;
+  salida: string;
+  alProgreso?: (fraccion: number, etapa: string) => void;
+  concurrencia?: number;
+}
+
+/** Render 1080×1920 de un recorte (Short o Reel): H.264 + AAC, el mismo audio mezclado del video completo. */
+export async function renderizarVertical(op: OpcionesRenderVertical): Promise<void> {
+  const serveUrl = await obtenerBundle((p) => op.alProgreso?.(p, "empaquetando"));
+  const servidor = await servirCarpeta(op.dirProyecto);
+  try {
+    const inputProps: PropsVertical = { timeline: op.timeline, recorte: op.recorte, base: servidor.url };
+    const composition = await selectComposition({ serveUrl, id: "Vertical", inputProps: inputProps as unknown as Record<string, unknown> });
+    await renderMedia({
+      composition,
+      serveUrl,
+      codec: "h264",
+      outputLocation: op.salida,
+      inputProps: inputProps as unknown as Record<string, unknown>,
+      crf: 18,
+      jpegQuality: 92,
+      audioCodec: "aac",
+      audioBitrate: "320k",
       pixelFormat: "yuv420p",
       concurrency: op.concurrencia ?? null,
       timeoutInMilliseconds: 120_000,

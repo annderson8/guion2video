@@ -41,6 +41,13 @@ Cambios hechos al construir el sistema, con su motivo. Todo lo demás sigue la e
 25. **La voz se genera una vez por estilo, no por proyecto.** Vive en `estilos/<id>/llamado/` (`voz.wav` + `llamado.json` con los tiempos por palabra) y todos los proyectos del estilo la reutilizan: `pnpm guion2video llamado generar --estilo <id>`. Si cambia el texto o la voz queda «obsoleto» y la composición avisa en vez de usar un audio que no corresponde.
 26. **Cuenta como parte del capítulo anterior.** No crea un capítulo de YouTube nuevo, y la música de esa parte sigue sonando durante el segmento. Los proyectos existentes solo rehacen composición, render y publicación ($0).
 
+## Shorts y Reels (recortes verticales)
+
+27. **Se vuelven a renderizar desde el mismo timeline, no se recortan del MP4.** La composición `Vertical` (1080×1920) reutiliza las ilustraciones, las animaciones, los gráficos y la `mezcla.wav` ya normalizada, así que cuesta $0 en APIs. Las ilustraciones llenan el cuadro con un punto de enfoque horizontal por recorte (`--enfoque`); los gráficos 16:9 (cifras, mapas, líneas de tiempo…) se dibujan a 1920×1080 y se reducen al ancho; el separador de parte se dibuja a tamaño completo. Subtítulos grandes por encima de la franja que tapan los botones de las apps.
+28. **Los segundos son los del video final** (el que ves en `video.mp4`) y se llevan al límite de palabra más cercano, para no cortar una palabra a la mitad (`--exacto` lo desactiva). El llamado a suscribirse se saca solo de cualquier recorte que lo cruce.
+29. **Tarjeta final animada**, fuera del tiempo recortado: Short → «Mira el video completo en el canal» + @canal; Reel → «Mira el video completo en el link de la bio». Textos y duración en `estilo.json → recortes`.
+30. **No es un paso del pipeline.** Los recortes se definen en `recortes.json` y cada uno guarda su propia huella, para que el proyecto no figure como «sin terminar» por no tener recortes y para renderizar solo el que cambió. Si el video cambia después de definir un recorte, la lista avisa de que los segundos pueden haberse desfasado.
+
 ## Infraestructura
 
 21. **Sin SQLite.** La especificación ya exige `proyecto.json`, `costos.json` y los `.meta.json`. Una base de datos duplicaría ese estado y podría desincronizarse. Cada proyecto es una carpeta autocontenida, copiable y versionable. La cola de trabajos es en memoria, con concurrencia y reintentos con espera exponencial, porque cada ejecución termina en un solo proceso. Si se pasa a un VPS con varios trabajadores, ahí sí conviene BullMQ o SQLite.

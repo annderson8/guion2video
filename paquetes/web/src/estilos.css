@@ -133,3 +133,7 @@ pre.descripcion { white-space: pre-wrap; background: #090b0f; border: 1px solid 
 .imagen .marco .sello .chip { background: rgba(10, 12, 16, 0.86); backdrop-filter: blur(4px); }
 .imagen .texto { line-height: 1.5; max-height: 3em; }
 .imagen .cuerpo .fila .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+
+/* Ventana de confirmación */
+.modal-fondo { position: fixed; inset: 0; background: rgba(5, 7, 10, 0.72); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+.modal { width: min(560px, 100%); display: grid; gap: 14px; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6); }

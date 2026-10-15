@@ -90,6 +90,17 @@ export const Estilo = z.object({
       texto: "Si te está gustando este contenido, suscríbete y dale me gusta. Así nos ayudas a crear más historias como esta.",
       despues_de_parte: 1,
     }),
+  /** Shorts y Reels que se sacan del video: textos y duración de la tarjeta final. */
+  recortes: z
+    .object({
+      cierre_s: z.number().min(1).max(8).default(3),
+      texto_short: z.string().default("Mira el video completo en el canal"),
+      texto_reel: z.string().default("Mira el video completo en el link de la bio"),
+      /** Línea bajo el texto de cierre del Short; sin ella usa llamado.canal. */
+      subtexto_short: z.string().optional(),
+      subtexto_reel: z.string().optional(),
+    })
+    .default({ cierre_s: 3, texto_short: "Mira el video completo en el canal", texto_reel: "Mira el video completo en el link de la bio" }),
   /** Animaciones que diseña Claude encima de las ilustraciones, con la tipografía y los colores del estilo (no generan imágenes ni audio). */
   superposiciones: z
     .object({
@@ -325,6 +336,27 @@ export const Proyecto = z.object({
   pasos: z.record(z.string(), EstadoPaso).default({}),
 });
 export type Proyecto = z.infer<typeof Proyecto>;
+
+// ───────────────────────── Recortes (Shorts y Reels) ─────────────────────────
+
+export const Recorte = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,40}$/, "usa minúsculas, números y guiones"),
+  tipo: z.enum(["short", "reel"]),
+  titulo: z.string().optional(),
+  /** Segundos del video final (el que ves en video.mp4, con el llamado incluido). */
+  desde_s: z.number().min(0),
+  hasta_s: z.number().positive(),
+  /** Punto horizontal (0 a 1) de las ilustraciones que se mantiene a la vista; 0,5 es el centro. */
+  enfoque: z.number().min(0).max(1).optional(),
+  /** Reemplaza el texto de cierre del estilo. */
+  texto_cierre: z.string().optional(),
+  /** Huella del timeline cuando se definió: si cambia, los segundos pueden haberse desfasado. */
+  huella_timeline: z.string().optional(),
+});
+export type Recorte = z.infer<typeof Recorte>;
+
+export const ArchivoRecortes = z.object({ recortes: z.array(Recorte).default([]) });
+export type ArchivoRecortes = z.infer<typeof ArchivoRecortes>;
 
 // ───────────────────────── Costos ─────────────────────────
 
