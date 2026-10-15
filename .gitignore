@@ -9,3 +9,4 @@ build/
 .guion2video-tmp/
 paquetes/web/dist/
 despliegue/datos/
+*.tsbuildinfo
